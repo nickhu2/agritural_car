@@ -14,6 +14,8 @@
 
 #define IMAGE_ROOT_DIR        ("/mnt/zed_data/picture_zed/")
 #define CLOUDPOINT_ROOT_DIR   ("/mnt/zed_data/pointclond_zed/")
+#define MAX_TIME_INFO_LEN (100)
+#define MAX_CMD_LEN (200)
 
 using namespace std;
 
@@ -38,11 +40,38 @@ void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
   cloud_index++;
 }
 
+static int mkdir_new_data_folder(string *pre_folder)
+{
+    //get current time
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    char time_info[MAX_TIME_INFO_LEN] = {0};
+    char cmd[MAX_CMD_LEN] = {0};
+
+    sprintf(time_info, "%d-%d-%d-%d:%d:%d/", 1900 + ltm->tm_year, ltm->tm_mon, ltm->tm_mday, ltm->tm_hour ,ltm->tm_min, ltm->tm_sec);
+    cout << "[timestamp]: " << time_info << endl;
+
+    pre_folder->append(time_info);
+
+    sprintf(cmd, "mkdir -p %s", pre_folder->c_str());
+
+    printf("%s\r\n", pre_folder->c_str());
+
+    if( (access( pre_folder->c_str(), F_OK )) != 0 )
+    {
+        system(cmd);
+        cout << "[cmd]: " << cmd << endl;
+    }
+
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
    time_t curtime;
    time(&curtime);
+   string iamge_dir = IMAGE_ROOT_DIR;
+   string cloud_dir = CLOUDPOINT_ROOT_DIR;
 
   /* check if the SSD has been mount to the /mnt */
   if( (access( IMAGE_ROOT_DIR, F_OK )) != 0 )
@@ -57,25 +86,19 @@ int main(int argc, char **argv)
       return -1;
   }
 
-  string iamge_dir = IMAGE_ROOT_DIR;
-  string cloud_dir = CLOUDPOINT_ROOT_DIR;
 
+  //----step1: create folder as timestamp
+  mkdir_new_data_folder(&iamge_dir);
 
-  //iamge_dir.append(ctime(&curtime));
-  //cloud_dir.append(ctime(&curtime));
-
-
-
-  mkdir(iamge_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-  mkdir(cloud_dir.c_str(),S_IRUSR | S_IWUSR | S_IXUSR | S_IRWXG | S_IRWXO);
-
-  //excute picture saving node
+  //----step2: excute picture saving node
   string pic_saver_cmd = "rosrun image_view image_saver \"_filename_format:=";
   pic_saver_cmd.append(iamge_dir);
   pic_saver_cmd.append("image_%06d.%s\" image:=/zed/zed_node/left/image_rect_color &");  //background
-
-  cout << "[excute cmd]: " << pic_saver_cmd << endl;
+  cout << "[cmd]: " << pic_saver_cmd << endl;
   system(pic_saver_cmd.c_str());
+
+
+
   /**
    * The ros::init() function needs to see argc and argv so that it can perform
    * any ROS arguments and name remapping that were provided at the command line.
