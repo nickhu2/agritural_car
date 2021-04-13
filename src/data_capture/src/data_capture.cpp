@@ -12,7 +12,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 
-#define IMAGE_ROOT_DIR        ("/mnt/zed_data/pincure_zed/")
+#define IMAGE_ROOT_DIR        ("/mnt/zed_data/picture_zed/")
 #define CLOUDPOINT_ROOT_DIR   ("/mnt/zed_data/pointclond_zed/")
 
 using namespace std;
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
   //excute picture saving node
   string pic_saver_cmd = "rosrun image_view image_saver \"_filename_format:=";
   pic_saver_cmd.append(iamge_dir);
-  pic_saver_cmd.append("image_%06d.%s\" /zed/zed_node/left/image_rect_color");
+  pic_saver_cmd.append("image_%06d.%s\" image:=/zed/zed_node/left/image_rect_color &");  //background
 
   cout << "[excute cmd]: " << pic_saver_cmd << endl;
   system(pic_saver_cmd.c_str());
