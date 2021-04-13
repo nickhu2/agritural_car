@@ -56,11 +56,11 @@ void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 
   //std::cerr << "Saving to ply file " << std::endl;
   char ply_file_name[MAX_TIME_INFO_LEN] = {0};
-  sprintf(ply_file_name, "%s_cloud_pont_%d", cur_valid_cloud_path, cloud_index);
+  sprintf(ply_file_name, "%scloud_pont_%d.ply", cur_valid_cloud_path, cloud_index);
 
   cout << ply_file_name << endl;
 
-  //pcl::io::savePLYFile("test_ply.ply", cloud); 
+  pcl::io::savePLYFile(ply_file_name, cloud);
 
   cloud_index++;
 }
