@@ -48,7 +48,7 @@ static int mkdir_new_data_folder(string *pre_folder)
     char time_info[MAX_TIME_INFO_LEN] = {0};
     char cmd[MAX_CMD_LEN] = {0};
 
-    sprintf(time_info, "%d-%d-%d-%d:%d:%d/", 1900 + ltm->tm_year, ltm->tm_mon, ltm->tm_mday, ltm->tm_hour ,ltm->tm_min, ltm->tm_sec);
+    sprintf(time_info, "%d-%d-%d-%d_%d_%d/", 1900 + ltm->tm_year, ltm->tm_mon, ltm->tm_mday, ltm->tm_hour ,ltm->tm_min, ltm->tm_sec);
     cout << "[timestamp]: " << time_info << endl;
 
     pre_folder->append(time_info);
