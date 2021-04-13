@@ -5,6 +5,16 @@
 #include <sys/stat.h>
 #include <sys/types.h> 
 
+#include <iostream>
+#include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/point_types.h>
+#include <pcl/common/io.h>
+#include <pcl/impl/point_types.hpp>
+#include <pcl/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
+
+
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/image_encodings.h>
@@ -22,12 +32,15 @@ using namespace std;
 static int pic_index = 0;
 static int cloud_index = 0;
 
+static char cur_valid_picture_path[MAX_TIME_INFO_LEN] = {0};
+static char cur_valid_cloud_path[MAX_TIME_INFO_LEN] = {0};
+
 /**
  * This tutorial demonstrates simple receipt of messages over the ROS system.
  */
 void image_callback(const sensor_msgs::ImageConstPtr &msg)
 {
-  ROS_INFO("nick enter image_callback");
+  //ROS_INFO("nick enter image_callback");
 
   pic_index++;
 }
@@ -36,6 +49,18 @@ void image_callback(const sensor_msgs::ImageConstPtr &msg)
 void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 {
   ROS_INFO("nick enter pointcloud2_callback");
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+
+  pcl::fromROSMsg(*msg, cloud);
+
+
+  //std::cerr << "Saving to ply file " << std::endl;
+  char ply_file_name[MAX_TIME_INFO_LEN] = {0};
+  sprintf(ply_file_name, "%s_cloud_pont_%d", cur_valid_cloud_path, cloud_index);
+
+  cout << ply_file_name << endl;
+
+  //pcl::io::savePLYFile("test_ply.ply", cloud); 
 
   cloud_index++;
 }
@@ -88,7 +113,14 @@ int main(int argc, char **argv)
 
 
   //----step1: create folder as timestamp
+  pic_index = 0;
+  cloud_index = 0;
   mkdir_new_data_folder(&iamge_dir);
+  mkdir_new_data_folder(&cloud_dir);
+  memset(cur_valid_picture_path, 0, sizeof(cur_valid_picture_path));
+  memset(cur_valid_cloud_path, 0, sizeof(cur_valid_cloud_path));
+  sprintf(cur_valid_picture_path, "%s", iamge_dir.c_str());
+  sprintf(cur_valid_cloud_path, "%s", cloud_dir.c_str());
 
   //----step2: excute picture saving node
   string pic_saver_cmd = "rosrun image_view image_saver \"_filename_format:=";
@@ -96,6 +128,7 @@ int main(int argc, char **argv)
   pic_saver_cmd.append("image_%06d.%s\" image:=/zed/zed_node/left/image_rect_color &");  //background
   cout << "[cmd]: " << pic_saver_cmd << endl;
   system(pic_saver_cmd.c_str());
+
 
 
 
