@@ -18,6 +18,7 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/image_encodings.h>
+#include <std_msgs/UInt64.h>
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
@@ -37,56 +38,7 @@ static int cloud_index = 0;
 
 static char cur_valid_picture_path[MAX_TIME_INFO_LEN] = {0};
 static char cur_valid_cloud_path[MAX_TIME_INFO_LEN] = {0};
-
-/**
- * This tutorial demonstrates simple receipt of messages over the ROS system.
- */
-void image_callback(const sensor_msgs::ImageConstPtr &msg)
-{
-  //ROS_INFO("nick enter image_callback");
-
-  pic_index++;
-}
-
-
-void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
-{
-  ROS_INFO("nick enter pointcloud2_callback");
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-
-  pcl::fromROSMsg(*msg, cloud);
-
-
-  //std::cerr << "Saving to ply file " << std::endl;
-  char ply_file_name[MAX_TIME_INFO_LEN] = {0};
-  sprintf(ply_file_name, "%scloud_pont_%d.ply", cur_valid_cloud_path, cloud_index);
-
-  cout << ply_file_name << endl;
-
-  pcl::io::savePLYFile(ply_file_name, cloud);
-
-  cloud_index++;
-}
-
-
-void rc_info_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
-{
-  ROS_INFO("nick enter pointcloud2_callback");
-  pcl::PointCloud<pcl::PointXYZ> cloud;
-
-  pcl::fromROSMsg(*msg, cloud);
-
-
-  //std::cerr << "Saving to ply file " << std::endl;
-  char ply_file_name[MAX_TIME_INFO_LEN] = {0};
-  sprintf(ply_file_name, "%scloud_pont_%d.ply", cur_valid_cloud_path, cloud_index);
-
-  cout << ply_file_name << endl;
-
-  pcl::io::savePLYFile(ply_file_name, cloud);
-
-  cloud_index++;
-}
+static bool sample_switch = false;
 
 
 static int mkdir_new_data_folder(string *pre_folder)
@@ -115,6 +67,92 @@ static int mkdir_new_data_folder(string *pre_folder)
     return 0;
 }
 
+
+static int create_new_data_folder()
+{
+   string iamge_dir = IMAGE_ROOT_DIR;
+   string cloud_dir = CLOUDPOINT_ROOT_DIR;
+
+    pic_index = 0;
+    cloud_index = 0;
+    mkdir_new_data_folder(&iamge_dir);
+    mkdir_new_data_folder(&cloud_dir);
+    memset(cur_valid_picture_path, 0, sizeof(cur_valid_picture_path));
+    memset(cur_valid_cloud_path, 0, sizeof(cur_valid_cloud_path));
+    sprintf(cur_valid_picture_path, "%s", iamge_dir.c_str());
+    sprintf(cur_valid_cloud_path, "%s", cloud_dir.c_str());
+
+    cout << "new pic folder: " << cur_valid_picture_path <<endl;
+    cout << "new clo folder: " << cur_valid_cloud_path <<endl;
+
+    return 0;
+}
+
+/**
+ * This tutorial demonstrates simple receipt of messages over the ROS system.
+ */
+void image_callback(const sensor_msgs::ImageConstPtr &msg)
+{
+  //ROS_INFO("nick enter image_callback");
+
+  pic_index++;
+}
+
+
+void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
+{
+  if(sample_switch == false)
+  {
+    return;
+  }
+
+  ROS_INFO("nick enter pointcloud2_callback");
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+
+  pcl::fromROSMsg(*msg, cloud);
+
+
+  //std::cerr << "Saving to ply file " << std::endl;
+  char ply_file_name[MAX_TIME_INFO_LEN] = {0};
+  sprintf(ply_file_name, "%scloud_pont_%d.ply", cur_valid_cloud_path, cloud_index);
+
+  cout << ply_file_name << endl;
+
+  pcl::io::savePLYFile(ply_file_name, cloud);
+
+  cloud_index++;
+}
+
+
+void rc_info_callback(const std_msgs::UInt64::ConstPtr& msg)
+{
+  ROS_INFO("nick enter rc_info_callback");
+  static uint16_t last_work_status = PAUSE;
+  static uint16_t cur_work_status = PAUSE;
+
+
+  uint64_t recv_data = msg->data;
+  uint16_t work_mode = recv_data & 0xFFFF;
+  uint16_t work_status = (recv_data >> 16) & 0xFFFF;
+
+  last_work_status = cur_work_status;
+  cur_work_status = work_status;
+
+  if((last_work_status == PAUSE) && (cur_work_status == PAUSE))   { sample_switch = false; }
+
+  //start new folder
+  if((last_work_status == PAUSE) && (cur_work_status == WORKING)) {create_new_data_folder(); sample_switch = false;}
+
+  if((last_work_status == WORKING) && (cur_work_status == WORKING)){sample_switch = true;}
+
+  if((last_work_status == WORKING) && (cur_work_status == PAUSE)) {sample_switch = false;}
+
+  cloud_index++;
+}
+
+
+
+
 int main(int argc, char **argv)
 {
    time_t curtime;
@@ -137,19 +175,12 @@ int main(int argc, char **argv)
 
 
   //----step1: create folder as timestamp
-  pic_index = 0;
-  cloud_index = 0;
-  mkdir_new_data_folder(&iamge_dir);
-  mkdir_new_data_folder(&cloud_dir);
-  memset(cur_valid_picture_path, 0, sizeof(cur_valid_picture_path));
-  memset(cur_valid_cloud_path, 0, sizeof(cur_valid_cloud_path));
-  sprintf(cur_valid_picture_path, "%s", iamge_dir.c_str());
-  sprintf(cur_valid_cloud_path, "%s", cloud_dir.c_str());
+  create_new_data_folder();
 
   //----step2: excute picture saving node
   string pic_saver_cmd = "rosrun image_view image_saver \"_filename_format:=";
   pic_saver_cmd.append(iamge_dir);
-  pic_saver_cmd.append("image_%06d.%s\" image:=/zed/zed_node/left/image_rect_color &");  //background
+  pic_saver_cmd.append("image_%06d.%s\" image:=/zed/zed_node/left/image_rect_color >> image_saver.log &");  //background
   cout << "[cmd]: " << pic_saver_cmd << endl;
   system(pic_saver_cmd.c_str());
 

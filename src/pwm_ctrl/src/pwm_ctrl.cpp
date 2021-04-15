@@ -31,7 +31,7 @@
 
 #define WORK_STATUS_THRESHOLD1  (900)
 
-#define LOOP_RATE_DEFAULT   (100)
+#define LOOP_RATE_DEFAULT   (30)
 
 using namespace std;
 
@@ -426,7 +426,7 @@ int main(int argc, char **argv)
                 msg.data = data_to_send;
                 chatter_pub.publish(msg);
 
-                printf("rc info:0x%llx", msg.data);
+                //printf("rc info:0x%llx", msg.data);
                 //printf("%u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
             }
             memset(buf, 0, sizeof(buf));
