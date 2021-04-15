@@ -10,7 +10,13 @@
 #include <errno.h>
 #include <sys/ioctl.h> 
 #include <linux/serial.h>
+#include "ros/ros.h"
+//#include "std_msgs/String.h"
+#include <std_msgs/UInt64.h>
 
+#include <sstream>
+
+#include "pwm_ctrl/common_macro.h"
 
 #define DEV_NAME  "/dev/ttyUSB0"
 
@@ -25,36 +31,18 @@
 
 #define WORK_STATUS_THRESHOLD1  (900)
 
+#define LOOP_RATE_DEFAULT   (100)
+
 using namespace std;
 
-typedef signed char        int8_t;
-typedef unsigned char      uint8_t;
-
-typedef signed short       int16_t;
-typedef unsigned short     uint16_t;
-
-typedef signed int         int32_t;
-typedef unsigned int       uint32_t;
-
-typedef enum
-{
-    MANUAL_MODE = 0,
-    AUTO_MODE = 1,
-} WORK_MODE_t;
-
-typedef enum
-{
-    PAUSE = 0,
-    WORKING = 1,
-} WORK_STATUS_t;
-
-typedef struct
-{
-    WORK_MODE_t         work_mode;              //come from channel6 (RC channel4)
-    WORK_STATUS_t       status;                 //come from channel5 (RC channel3)
-    uint16_t            speed_pwm_info;         //come from channel4 (RC channel2)
-    uint16_t            direction_pwm_info;     //come from channel3 (RC channel1)
-} ctrl_desc_t;
+//typedef signed char        int8_t;
+//typedef unsigned char      uint8_t;
+//
+//typedef signed short       int16_t;
+//typedef unsigned short     uint16_t;
+//
+//typedef signed int         int32_t;
+//typedef unsigned int       uint32_t;
 
 
 static WORK_STATUS_t local_work_status = PAUSE;
@@ -141,7 +129,7 @@ static int uart_send(int fd,void *buf, int len)
     return count;
 }
 
-void Process(uint8_t* raw,uint16_t* result)
+static void Process(uint8_t* raw,uint16_t* result)
 {
   uint8_t bitsToRead=3; // bitsToRead表示需要从下一个字节中读取多少bit。规律：bitsToRead 每次总是增加 3
   uint8_t bitsToShift;
@@ -370,20 +358,25 @@ int uart_recv_timeout(int uart_fd, void *buf, int len, int timeout_ms)
 
 
 
-int main (int argc, char *argv[])
+int main(int argc, char **argv)
 {
+    ros::init(argc, argv, "talker");
+    ros::NodeHandle n;
+    ros::Publisher chatter_pub = n.advertise<std_msgs::UInt64>(RC_CTRL_INFO, 1000);
+    ros::Rate loop_rate(LOOP_RATE_DEFAULT);
+
+    int count = 0;
+    char buf[MAX_BUF_SIZE] = {0};
+
 	//int	fd = open(DEV_NAME, O_RDWR | O_NOCTTY);
     int fd = open(DEV_NAME, O_RDWR | O_NONBLOCK);
 	int len = 0;
-
-
     if(fd < 0)
 	{
         printf("[info] open uart failed\n");
 		perror(DEV_NAME);
 		return -1;
     }
-
     printf("[info] open uart successfully\n");
 
     int ret = sbus_config(fd);
@@ -397,57 +390,53 @@ int main (int argc, char *argv[])
         printf("config uart OK\n");
     }
 
-    char buf[MAX_BUF_SIZE] = {0};
 
-    while(1)
+
+    while (ros::ok())
     {
+        std_msgs::UInt64 msg;
+
         len = uart_recv_timeout(fd, buf, sizeof(buf), 100);
         //printf("[info] read bytes size: %d\n", len);
 
-    	if(len <= 0)
-    	{
-    		continue;
-    	}
-        else
+    	if(len > 0)
         {
-            //printf("[info] read bytes size: %d\n", len);
+            ctrl_desc_t local_ctrl;
+            uint8_t  frame_data[FRAME_LEN];
+
+            if(decode_value(fd, buf, len, frame_data, &local_ctrl) == 0)
+            {
+                if(local_ctrl.work_mode == MANUAL_MODE)
+                {
+                    //in mannul mode, sendout sbus data as RC input
+                    uart_send(fd, frame_data, sizeof(frame_data));
+                }
+                else
+                {
+                    //TODO: ctrl speed & direction as program in auto mode
+                    uart_send(fd, frame_data, sizeof(frame_data));
+                }
+                local_work_status = local_ctrl.status;
+
+                uint64_t data_to_send = 0;
+                data_to_send = (uint64_t)((uint16_t)local_ctrl.work_mode);
+                data_to_send |= ((uint64_t)((uint16_t)local_ctrl.status)) << 16;
+                data_to_send |= ((uint64_t)((uint16_t)local_ctrl.speed_pwm_info)) << 32;
+                data_to_send |= ((uint64_t)((uint16_t)local_ctrl.direction_pwm_info)) << 48;
+                msg.data = data_to_send;
+                chatter_pub.publish(msg);
+
+                printf("rc info:0x%llx", msg.data);
+                //printf("%u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
+            }
+            memset(buf, 0, sizeof(buf));
         }
 
-
-        ctrl_desc_t local_ctrl;
-        uint8_t  frame_data[FRAME_LEN];
-
-        if(decode_value(fd, buf, len, frame_data, &local_ctrl) == 0)
-        {
-            if(local_ctrl.work_mode == MANUAL_MODE)
-            {
-                //in mannul mode, sendout sbus data as RC input
-                uart_send(fd, frame_data, sizeof(frame_data));
-            }
-            else
-            {
-                //TODO: ctrl speed & direction as program in auto mode
-                uart_send(fd, frame_data, sizeof(frame_data));
-            }
-
-
-            local_work_status = local_ctrl.status;
-
-            /*
-            if(local_ctrl.status == PAUSE)
-            {
-
-            }
-            else
-            {
-
-            }*/
-
-
-            printf("%u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
-        }
-
-        memset(buf, 0, sizeof(buf));
+        ros::spinOnce();
+        loop_rate.sleep();
+        ++count;
 
     }
+
+    return 0;
 }
