@@ -13,10 +13,11 @@
 #include "ros/ros.h"
 //#include "std_msgs/String.h"
 #include <std_msgs/UInt64.h>
+#include <std_msgs/UInt8.h>
 
 #include <sstream>
 
-#include "pwm_ctrl/common_macro.h"
+#include "common_func/move_ctrl.h"
 
 #define DEV_NAME  "/dev/ttyUSB0"
 
@@ -46,7 +47,7 @@ using namespace std;
 
 
 static WORK_STATUS_t local_work_status = PAUSE;
-
+static bool pwm_is_used_by_program = false;
 
 #define WORK_MODE_DEFAULT   (MANUAL_MODE)
 #define WORK_STATUS_DEFAULT (PAUSE)
@@ -355,7 +356,41 @@ int uart_recv_timeout(int uart_fd, void *buf, int len, int timeout_ms)
 
 
 
+void rc_info_callback(const std_msgs::UInt64::ConstPtr& msg)
+{
+  //ROS_INFO("nick enter rc_info_callback");
+  static uint16_t last_work_status = PAUSE;
+  static uint16_t cur_work_status = PAUSE;
+  uint8_t frame_temp1[FRAME_LEN] = {0};
+  uint8_t frame_temp2[FRAME_LEN] = {0};  
 
+  uint8_t recv_data = msg->data;
+
+  pwm_is_used_by_program = true;
+  switch(recv_data)
+  {
+    case(PROG_TASK_READY):
+    {
+        set_direct_left(frame_temp1, frame_temp2);
+        sleep(1);
+
+        cout << "power on & ready" <<endl;
+        break;        
+    }
+    case(PROG_TASK_BEGIN):
+    {
+        cout << "start sample" <<endl;
+        break;
+    }
+    case(PROG_TASK_END):
+    {
+        cout << "stop sample" <<endl;
+        break;
+    }
+    pwm_is_used_by_program = false;
+
+  }
+}
 
 
 int main(int argc, char **argv)
@@ -363,6 +398,9 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "talker");
     ros::NodeHandle n;
     ros::Publisher chatter_pub = n.advertise<std_msgs::UInt64>(RC_CTRL_INFO, 1000);
+    ros::Subscriber pgro_status_sub = n.subscribe(PROG_STATUS_TOPIC, 100, rc_info_callback);
+
+
     ros::Rate loop_rate(LOOP_RATE_DEFAULT);
 
     int count = 0;
@@ -406,7 +444,7 @@ int main(int argc, char **argv)
 
             if(decode_value(fd, buf, len, frame_data, &local_ctrl) == 0)
             {
-                if(local_ctrl.work_mode == MANUAL_MODE)
+                if((local_ctrl.work_mode == MANUAL_MODE) && (pwm_is_used_by_program == false))
                 {
                     //in mannul mode, sendout sbus data as RC input
                     uart_send(fd, frame_data, sizeof(frame_data));

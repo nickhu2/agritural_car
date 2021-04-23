@@ -1,10 +1,23 @@
-#ifndef COMMON_MACRO_H__
-#define COMMON_MACRO_H__
+#ifndef MOVE_CTRL_H__
+#define MOVE_CTRL_H__
+
+
+#include <stdio.h>
+#include <string>
+#include <stdlib.h>
+#include "ros/ros.h"
+
 
 #define PROG_PWM_SERVO_VALUE	"/prog/pwm_servo"
 #define PROG_PWM_MOTOR_VALUE	"/prog/pwm_motor"
-
+#define PROG_STATUS_TOPIC		"/prog/task_status"
 #define RC_CTRL_INFO			"/rc_control_info"
+
+
+#define PROG_TASK_READY			(0x1)
+#define PROG_TASK_BEGIN			(0x2)
+#define PROG_TASK_END			(0x3)
+
 
 typedef enum
 {
@@ -27,6 +40,9 @@ typedef struct
 } ctrl_desc_t;
 
 
+int32_t set_direct_front(uint8_t *frame_in, uint8_t *frame_out);
+int32_t set_direct_left(uint8_t *frame_in, uint8_t *frame_out);
+int32_t set_direct_right(uint8_t *frame_in, uint8_t *frame_out);
+int32_t set_speed_0(uint8_t *frame_in, uint8_t *frame_out);
 
-#endif //COMMON_MACRO_H__
-
+#endif //MOVE_CTRL_H__

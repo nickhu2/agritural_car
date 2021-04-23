@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(pwm_ctrl)
+project(common_func)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -10,10 +10,7 @@ project(pwm_ctrl)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
-  common_func
-  sensor_msgs
   std_msgs
-  data_capture
 )
 
 ## System dependencies are found with CMake's conventions
@@ -73,7 +70,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   sensor_msgs#   std_msgs
+#   std_msgs
 # )
 
 ################################################
@@ -106,9 +103,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES pwm_ctrl
-#  CATKIN_DEPENDS roscpp rospy sensor_msgs std_msgs
+   INCLUDE_DIRS include
+   LIBRARIES common_func
+   CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
 )
 
@@ -119,14 +116,13 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include
+ include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/pwm_ctrl.cpp
-# )
+add_library(${PROJECT_NAME}
+   src/move_ctrl.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -136,7 +132,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/pwm_ctrl_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/common_func_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -200,20 +196,10 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_pwm_ctrl.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_common_func.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
-
-
-
-add_executable(pwm_ctrl src/pwm_ctrl.cpp)
-target_link_libraries(
-pwm_ctrl
-${catkin_LIBRARIES})
-
-add_dependencies(pwm_ctrl pwm_ctrl_generate_messages_cpp)
-
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)

@@ -19,12 +19,13 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/UInt64.h>
+#include <std_msgs/UInt8.h>
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 
 
-#include "data_capture/common_macro.h"
+#include "common_func/move_ctrl.h"
 
 #define IMAGE_ROOT_DIR        ("/mnt/zed_data/picture_zed/")
 #define CLOUDPOINT_ROOT_DIR   ("/mnt/zed_data/pointclond_zed/")
@@ -40,6 +41,7 @@ static char cur_valid_picture_path[MAX_TIME_INFO_LEN] = {0};
 static char cur_valid_cloud_path[MAX_TIME_INFO_LEN] = {0};
 static bool sample_switch = false;
 
+static ros::Publisher *status_publisher = NULL;
 
 static int mkdir_new_data_folder(string *pre_folder)
 {
@@ -126,7 +128,7 @@ void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 
 void rc_info_callback(const std_msgs::UInt64::ConstPtr& msg)
 {
-  ROS_INFO("nick enter rc_info_callback");
+  //ROS_INFO("nick enter rc_info_callback");
   static uint16_t last_work_status = PAUSE;
   static uint16_t cur_work_status = PAUSE;
 
@@ -141,13 +143,26 @@ void rc_info_callback(const std_msgs::UInt64::ConstPtr& msg)
   if((last_work_status == PAUSE) && (cur_work_status == PAUSE))   { sample_switch = false; }
 
   //start new folder
-  if((last_work_status == PAUSE) && (cur_work_status == WORKING)) {create_new_data_folder(); sample_switch = false;}
+  if((last_work_status == PAUSE) && (cur_work_status == WORKING))
+  {
+    create_new_data_folder();
+    sample_switch = false;
+    //send begin sample flag to pwm ctrl
+    std_msgs::UInt8 msg;
+    msg.data = PROG_TASK_BEGIN;
+    status_publisher->publish(msg);
+  }
 
-  if((last_work_status == WORKING) && (cur_work_status == WORKING)){sample_switch = true;}
+  if((last_work_status == WORKING) && (cur_work_status == WORKING))
+  {
+    sample_switch = true;
+    //send begin sample flag to pwm ctrl
+    std_msgs::UInt8 msg;
+    msg.data = PROG_TASK_END;
+    status_publisher->publish(msg);
+  }
 
   if((last_work_status == WORKING) && (cur_work_status == PAUSE)) {sample_switch = false;}
-
-  cloud_index++;
 }
 
 
@@ -175,7 +190,7 @@ int main(int argc, char **argv)
 
 
   //----step1: create folder as timestamp
-  create_new_data_folder();
+  //create_new_data_folder();
 
   //----step2: excute picture saving node
   string pic_saver_cmd = "rosrun image_view image_saver \"_filename_format:=";
@@ -198,6 +213,13 @@ int main(int argc, char **argv)
 
   ros::Subscriber rc_info = n.subscribe(RC_CTRL_INFO, 100, rc_info_callback);
 
+  ros::Publisher chatter_pub = n.advertise<std_msgs::UInt8>(PROG_STATUS_TOPIC, 100);
+  status_publisher = &chatter_pub;
+
+
+  std_msgs::UInt8 msg;
+  msg.data = PROG_TASK_READY;
+  status_publisher->publish(msg);
 
   ros::spin();
 
