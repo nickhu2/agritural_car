@@ -220,6 +220,8 @@ int main(int argc, char **argv)
   ros::Publisher chatter_pub = n.advertise<std_msgs::UInt8>(PROG_STATUS_TOPIC, 100);
   status_publisher = &chatter_pub;
 
+  //wait PWM ready
+  sleep(3);
 
   std_msgs::UInt8 msg;
   msg.data = PROG_TASK_READY;

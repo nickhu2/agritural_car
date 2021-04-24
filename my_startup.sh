@@ -31,6 +31,6 @@ rosrun pwm_ctrl pwm_ctrl &
 cd /home/ubuntu/agritural_car/
 echo "" >> /mnt/zed_data/zed_log/${time_cur}/data_capture.log
 echo "[data capture begin]" >>/mnt/zed_data/zed_log/${time_cur}/data_capture.log
-rosrun data_capture data_capture
+rosrun data_capture data_capture &
 
 

@@ -373,17 +373,29 @@ void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
     {
         set_direct_left(frame_temp1, frame_temp2);
         sleep(1);
+        memset(frame_temp1, 0, sizeof(frame_temp1));
+        memset(frame_temp2, 0, sizeof(frame_temp2));
+        set_direct_right(frame_temp1, frame_temp2);
+        sleep(1);
 
         cout << "power on & ready" <<endl;
         break;        
     }
     case(PROG_TASK_BEGIN):
     {
+        memset(frame_temp1, 0, sizeof(frame_temp1));
+        memset(frame_temp2, 0, sizeof(frame_temp2));
+        set_direct_left(frame_temp1, frame_temp2);
+        sleep(1);
         cout << "start sample" <<endl;
         break;
     }
     case(PROG_TASK_END):
     {
+        memset(frame_temp1, 0, sizeof(frame_temp1));
+        memset(frame_temp2, 0, sizeof(frame_temp2));
+        set_direct_right(frame_temp1, frame_temp2);
+        sleep(1);
         cout << "stop sample" <<endl;
         break;
     }
@@ -465,7 +477,7 @@ int main(int argc, char **argv)
                 chatter_pub.publish(msg);
 
                 //printf("rc info:0x%llx", msg.data);
-                //printf("%u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
+                printf("%u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
             }
             memset(buf, 0, sizeof(buf));
         }
