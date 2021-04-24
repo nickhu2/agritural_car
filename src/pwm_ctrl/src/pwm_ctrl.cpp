@@ -477,7 +477,7 @@ int main(int argc, char **argv)
                 chatter_pub.publish(msg);
 
                 //printf("rc info:0x%llx", msg.data);
-                printf("%u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
+                //printf("%u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
             }
             memset(buf, 0, sizeof(buf));
         }

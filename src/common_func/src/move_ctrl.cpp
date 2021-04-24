@@ -19,12 +19,12 @@
 #define SBUS_PACK_LEN	(25)
 #define SBUS_HEADER		(0x0F)
 
-#define FRONT_PWM_VALUE	(900)
+#define FRONT_PWM_VALUE	(947)
 #define LEFT_PWM_VALUE	(200)
-#define RIGHT_PWM_VALUE	(800)
+#define RIGHT_PWM_VALUE	(1800)
 
 
-#define STOP_PWM_VALUE	(900)
+#define STOP_PWM_VALUE	(1012)
 
 
 static void direction_pwm_pack(uint16_t pwm_value, uint8_t *frame_in, uint8_t *frame_out)
