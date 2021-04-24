@@ -155,14 +155,18 @@ void rc_info_callback(const std_msgs::UInt64::ConstPtr& msg)
 
   if((last_work_status == WORKING) && (cur_work_status == WORKING))
   {
+    //enable sample
     sample_switch = true;
-    //send begin sample flag to pwm ctrl
-    std_msgs::UInt8 msg;
-    msg.data = PROG_TASK_END;
-    status_publisher->publish(msg);
   }
 
-  if((last_work_status == WORKING) && (cur_work_status == PAUSE)) {sample_switch = false;}
+  if((last_work_status == WORKING) && (cur_work_status == PAUSE))
+  {
+      sample_switch = false;
+      //send stop sample flag to pwm ctrl
+      std_msgs::UInt8 msg;
+      msg.data = PROG_TASK_END;
+      status_publisher->publish(msg);
+  }
 }
 
 

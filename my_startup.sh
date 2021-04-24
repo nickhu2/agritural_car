@@ -4,6 +4,7 @@
 echo "start my agricultural car program"
 
 sudo mount /dev/sda1  /mnt/zed_data/
+chmod 777 /dev/ttyUSB0
 
 time_cur=`date -d next-day +%Y-%m-%d-%H_%M_%S`
 mkdir -p /mnt/zed_data/zed_log/${time_cur}
@@ -19,16 +20,17 @@ export PATH=/usr/local/cuda-10.2/bin:$PATH
 
 
 cd /home/ubuntu/catkin_ws
-echo "[zed wrapper begin]" >> /mnt/zed_data/zed_log/${time_cur}/run.log
+echo "[zed wrapper begin]" >> /mnt/zed_data/zed_log/${time_cur}/zed_wrapper.log
 
-roslaunch zed_wrapper zed.launch >> /mnt/zed_data/zed_log/${time_cur}/run.log  & #background
+roslaunch zed_wrapper zed.launch >> /mnt/zed_data/zed_log/${time_cur}/zed_wrapper.log  & #background
 
-
+echo "" >> /mnt/zed_data/zed_log/${time_cur}/pwm_ctrl.log
+echo "[pwm control begin]" >>/mnt/zed_data/zed_log/${time_cur}/pwm_ctrl.log
+rosrun pwm_ctrl pwm_ctrl &
 
 cd /home/ubuntu/agritural_car/
-echo "" >> /mnt/zed_data/zed_log/${time_cur}/run.log
-echo "[data capture begin]" >>/mnt/zed_data/zed_log/${time_cur}/run.log
+echo "" >> /mnt/zed_data/zed_log/${time_cur}/data_capture.log
+echo "[data capture begin]" >>/mnt/zed_data/zed_log/${time_cur}/data_capture.log
 rosrun data_capture data_capture
 
-echo "" >> /mnt/zed_data/zed_log/${time_cur}/run.log
-echo "[pwm control begin]" >>/mnt/zed_data/zed_log/${time_cur}/run.log
+

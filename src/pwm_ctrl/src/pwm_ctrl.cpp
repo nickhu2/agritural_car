@@ -356,7 +356,7 @@ int uart_recv_timeout(int uart_fd, void *buf, int len, int timeout_ms)
 
 
 
-void rc_info_callback(const std_msgs::UInt64::ConstPtr& msg)
+void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
 {
   //ROS_INFO("nick enter rc_info_callback");
   static uint16_t last_work_status = PAUSE;
