@@ -34,3 +34,10 @@ echo "[data capture begin]" >>/mnt/zed_data/zed_log/${time_cur}/data_capture.log
 rosrun data_capture data_capture &
 
 
+
+#kill -9 $(pidof zed_wrapper)
+
+#kill -9 $(pidof pwm_ctrl)
+
+#kill -9 $(pidof data_capture)
+
