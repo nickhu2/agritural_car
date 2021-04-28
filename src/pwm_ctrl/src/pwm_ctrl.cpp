@@ -153,7 +153,9 @@ void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
   static uint16_t last_work_status = PAUSE;
   static uint16_t cur_work_status = PAUSE;
   uint8_t frame_temp1[FRAME_LEN] = {0};
-  uint8_t frame_temp2[FRAME_LEN] = {0};  
+  uint8_t frame_temp2[FRAME_LEN] = {0};
+  uint8_t frame_temp3[FRAME_LEN] = {0};  
+
 
   uint8_t recv_data = msg->data;
 
@@ -163,19 +165,23 @@ void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
     case(PROG_TASK_READY):
     {
         set_direct_left(frame_temp1, frame_temp2);
-        uart_send(frame_temp2, sizeof(frame_temp2));
-        //uart send frame_temp2
+        set_speed_0(frame_temp2, frame_temp3);
+        uart_send(frame_temp3, sizeof(frame_temp3));
         sleep(1);
 
 
         memset(frame_temp1, 0, sizeof(frame_temp1));
         memset(frame_temp2, 0, sizeof(frame_temp2));
+        memset(frame_temp3, 0, sizeof(frame_temp3));
+
         set_direct_right(frame_temp1, frame_temp2);
-        uart_send(frame_temp2, sizeof(frame_temp2));
+        set_speed_0(frame_temp2, frame_temp3);
+        uart_send(frame_temp3, sizeof(frame_temp3));
         sleep(1);
 
         set_direct_front(frame_temp1, frame_temp2);
-        uart_send(frame_temp2, sizeof(frame_temp2));
+        set_speed_0(frame_temp2, frame_temp3);
+        uart_send(frame_temp3, sizeof(frame_temp3));
 
         cout << "power on & ready" <<endl;
         break;        
@@ -184,8 +190,11 @@ void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
     {
         memset(frame_temp1, 0, sizeof(frame_temp1));
         memset(frame_temp2, 0, sizeof(frame_temp2));
+        memset(frame_temp3, 0, sizeof(frame_temp3));
+
         set_direct_left(frame_temp1, frame_temp2);
-        uart_send(frame_temp2, sizeof(frame_temp2));
+        set_speed_0(frame_temp2, frame_temp3);
+        uart_send(frame_temp3, sizeof(frame_temp3));
 
         sleep(1);
         cout << "start sample" <<endl;
@@ -195,8 +204,11 @@ void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
     {
         memset(frame_temp1, 0, sizeof(frame_temp1));
         memset(frame_temp2, 0, sizeof(frame_temp2));
+        memset(frame_temp3, 0, sizeof(frame_temp3));
+
         set_direct_right(frame_temp1, frame_temp2);
-        uart_send(frame_temp2, sizeof(frame_temp2));
+        set_speed_0(frame_temp2, frame_temp3);
+        uart_send(frame_temp3, sizeof(frame_temp3));
         sleep(1);
         cout << "stop sample" <<endl;
         break;

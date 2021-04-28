@@ -215,7 +215,7 @@ int main(int argc, char **argv)
   ros::NodeHandle sample_status;  
 
   ros::Subscriber image_sub = image_handle.subscribe("/zed/zed_node/left/image_rect_color", 10, image_callback);
-  ros::Subscriber pointcloud2_sub = point_handle.subscribe("/zed/zed_node/point_cloud/cloud_registered", 10, pointcloud2_callback);
+  ros::Subscriber pointcloud2_sub = point_handle.subscribe("/zed/zed_node/point_cloud/cloud_registered", 5, pointcloud2_callback);
   ros::Subscriber rc_info = rc_handle.subscribe(RC_CTRL_INFO, 100, rc_info_callback);
 
   ros::Publisher chatter_pub = sample_status.advertise<std_msgs::UInt8>(PROG_STATUS_TOPIC, 100);
