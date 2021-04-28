@@ -231,7 +231,7 @@ static int sbus_config(int sbus_fd)
 
 int uart_init(void)
 {
-    int uart_fd = open(DEV_NAME, O_RDWR | O_NONBLOCK);
+    uart_fd = open(DEV_NAME, O_RDWR | O_NONBLOCK);
 
     if(uart_fd < 0)
 	{
