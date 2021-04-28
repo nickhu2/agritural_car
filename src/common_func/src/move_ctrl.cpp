@@ -32,9 +32,9 @@ static void direction_pwm_pack(uint16_t pwm_value, uint8_t *frame_in, uint8_t *f
 {
 	memcpy(frame_out, frame_in, SBUS_PACK_LEN);
 	//channel 3
-	frame_out[5] =  frame_in[5] & 0xFE;
-	frame_out[4] =  frame_in[4] & 0;
-	frame_out[3] =  frame_in[3] & 0x3F;
+	//frame_out[5] =  frame_in[5] & 0xFE;
+	//frame_out[4] =  frame_in[4] & 0;
+	//frame_out[3] =  frame_in[3] & 0x3F;
 
 	frame_out[5] =  frame_out[5] | ((pwm_value >> 10) &0x1);
 	frame_out[4] =  frame_out[4] | ((pwm_value >> 2) & 0xFF);
@@ -50,8 +50,8 @@ static void speed_pwm_pack(uint16_t pwm_value, uint8_t *frame_in, uint8_t *frame
 {
 	memcpy(frame_out, frame_in, SBUS_PACK_LEN);
 	//channel 3
-	frame_out[6] =  frame_in[6] & 0xF0;
-	frame_out[5] =  frame_in[5] & 0x1;
+	//frame_out[6] =  frame_in[6] & 0xF0;
+	//frame_out[5] =  frame_in[5] & 0x1;
 
 	frame_out[6] =  frame_out[6] | ((pwm_value >> 7) &0x0F);
 	frame_out[5] =  frame_out[5] | ((pwm_value << 1) & 0xFF);
