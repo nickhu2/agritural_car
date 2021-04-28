@@ -92,7 +92,7 @@ static void Process(uint8_t* raw,uint16_t* result)
   }while(startByte>0);  
 }
 
-static int decode_value(char* buf, int len, uint8_t *frame_data, ctrl_desc_t *desc)
+static int decode_value(uint8_t* buf, int len, uint8_t *frame_data, ctrl_desc_t *desc)
 {
 	int  			left_len = len;
 
@@ -192,8 +192,37 @@ void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
         memset(frame_temp2, 0, sizeof(frame_temp2));
         memset(frame_temp3, 0, sizeof(frame_temp3));
 
+
         set_direct_left(frame_temp1, frame_temp2);
+
+
+        uint8_t decode_temp[FRAME_LEN] = {0};
+        ctrl_desc_t local_ctrl;
+        memset(&local_ctrl, 0, sizeof(local_ctrl));
+        if(decode_value(frame_temp2, FRAME_LEN, decode_temp, &local_ctrl) == 0)
+        {
+            printf("decode1: %u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
+        }
+        else
+        {
+            printf("decode1: decode failed\r\n");
+        }
+
+
         set_speed_0(frame_temp2, frame_temp3);
+
+        memset(decode_temp, 0, FRAME_LEN);
+        memset(&local_ctrl, 0, sizeof(local_ctrl));
+        if(decode_value(frame_temp3, FRAME_LEN, decode_temp, &local_ctrl) == 0)
+        {
+            printf("decode2: %u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
+        }
+        else
+        {
+            printf("decode2: decode failed\r\n");
+        }
+
+
         uart_send(frame_temp3, sizeof(frame_temp3));
 
         sleep(1);
@@ -231,7 +260,7 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(LOOP_RATE_DEFAULT);
 
     int count = 0;
-    char buf[MAX_BUF_SIZE] = {0};
+    uint8_t buf[MAX_BUF_SIZE] = {0};
     int len = 0;
 
 
