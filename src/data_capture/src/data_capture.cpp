@@ -109,6 +109,7 @@ void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
   }
 
   ROS_INFO("nick enter pointcloud2_callback");
+  /*
   pcl::PointCloud<pcl::PointXYZ> cloud;
 
   pcl::fromROSMsg(*msg, cloud);
@@ -121,7 +122,7 @@ void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
   cout << ply_file_name << endl;
 
   pcl::io::savePLYFile(ply_file_name, cloud);
-
+*/
   cloud_index++;
 }
 

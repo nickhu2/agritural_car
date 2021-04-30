@@ -12,14 +12,14 @@ mkdir -p /mnt/zed_data/zed_log/${time_cur}
 
 
 source /opt/ros/melodic/setup.bash
-source /home/ubuntu/catkin_ws/devel/setup.bash
+source /home/ubuntu/zed_wrapper_modified/devel/setup.bash
 source /home/ubuntu/agritural_car/devel/setup.bash
 export CUBA_HOME=/usr/local/cuda-10.2
 export LD_LIBRARY_PATH=/usr/local/cuda-10.2/lib64:$LD_LIBRARY_PATH
 export PATH=/usr/local/cuda-10.2/bin:$PATH
 
 
-cd /home/ubuntu/catkin_ws
+cd /home/ubuntu/zed_wrapper_modified
 echo "[zed wrapper begin]" >> /mnt/zed_data/zed_log/${time_cur}/zed_wrapper.log
 
 roslaunch zed_wrapper zed.launch >> /mnt/zed_data/zed_log/${time_cur}/zed_wrapper.log  & #background
