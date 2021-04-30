@@ -103,12 +103,11 @@ void image_callback(const sensor_msgs::ImageConstPtr &msg)
 
 void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 {
+  ROS_INFO("nick enter pointcloud2_callback");
   if(sample_switch == false)
   {
     return;
   }
-
-  ROS_INFO("nick enter pointcloud2_callback");
   /*
   pcl::PointCloud<pcl::PointXYZ> cloud;
 
