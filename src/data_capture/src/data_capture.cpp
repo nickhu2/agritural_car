@@ -108,20 +108,20 @@ void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
   {
     return;
   }
-  /*
+
   pcl::PointCloud<pcl::PointXYZ> cloud;
+  pcl::PCDWriter writer;
 
   pcl::fromROSMsg(*msg, cloud);
 
 
-  //std::cerr << "Saving to ply file " << std::endl;
-  char ply_file_name[MAX_TIME_INFO_LEN] = {0};
-  sprintf(ply_file_name, "%scloud_pont_%d.ply", cur_valid_cloud_path, cloud_index);
+  char pcd_file_name[MAX_TIME_INFO_LEN] = {0};
+  sprintf(pcd_file_name, "%scloud_pont_%d.pcd", cur_valid_cloud_path, cloud_index);
 
-  cout << ply_file_name << endl;
+  cout << pcd_file_name << endl;
 
-  pcl::io::savePLYFile(ply_file_name, cloud);
-*/
+  writer.writeBinaryCompressed(pcd_file_name, cloud);
+
   cloud_index++;
 }
 
@@ -196,13 +196,6 @@ int main(int argc, char **argv)
   //----step1: create folder as timestamp
   //create_new_data_folder();
 
-  //----step2: excute picture saving node
-  string pic_saver_cmd = "rosrun image_view image_saver \"_filename_format:=";
-  pic_saver_cmd.append(iamge_dir);
-  pic_saver_cmd.append("image_%06d.%s\" image:=/zed/zed_node/left/image_rect_color >> image_saver.log &");  //background
-  cout << "[cmd]: " << pic_saver_cmd << endl;
-  system(pic_saver_cmd.c_str());
-
 
 
 
@@ -215,7 +208,7 @@ int main(int argc, char **argv)
   ros::NodeHandle sample_status;  
 
   ros::Subscriber image_sub = image_handle.subscribe("/zed/zed_node/left/image_rect_color", 10, image_callback);
-  ros::Subscriber pointcloud2_sub = point_handle.subscribe("/zed/zed_node/point_cloud/cloud_registered", 5, pointcloud2_callback);
+  ros::Subscriber pointcloud2_sub = point_handle.subscribe("/zed/zed_node/point_cloud/cloud_registered", 10, pointcloud2_callback);
   ros::Subscriber rc_info = rc_handle.subscribe(RC_CTRL_INFO, 100, rc_info_callback);
 
   ros::Publisher chatter_pub = sample_status.advertise<std_msgs::UInt8>(PROG_STATUS_TOPIC, 100);

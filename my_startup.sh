@@ -34,10 +34,11 @@ echo "[data capture begin]" >>/mnt/zed_data/zed_log/${time_cur}/data_capture.log
 rosrun data_capture data_capture &
 
 
-
+rosrun image_view image_saver "_filename_format:=/mnt/zed_data/picture_zed/image_%06d.%s" image:=/zed/zed_node/left/image_rect_color &
 #kill -9 $(pidof zed_wrapper)
 
 #kill -9 $(pidof pwm_ctrl)
 
 #kill -9 $(pidof data_capture)
 
+#kill -9 $(pidof image_saver)
