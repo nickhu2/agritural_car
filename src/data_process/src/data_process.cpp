@@ -21,6 +21,7 @@
 #include "common_func/algorithm.h"
 #include "data_process/image_process.h"
 #include "data_process/cudaFilter.h"
+#include "data_process/cudaSegmentation.h"
 
 using namespace std;
 static float floor_height = 0.0;
@@ -202,7 +203,7 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 
   off_ground->width  = nCount;
   off_ground->height = 1;
-  off_ground->points.resize (cloudDst->width * cloudDst->height);
+  off_ground->points.resize (off_ground->width * off_ground->height);
 
   int check = 0;
   for (std::size_t i = 0; i < nCount; ++i)
