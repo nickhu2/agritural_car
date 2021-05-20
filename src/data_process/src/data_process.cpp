@@ -540,6 +540,7 @@ int main(int argc, char **argv)
         std::cerr << *cloud << std::endl;
 
         // 限制点云数量
+        /*
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_limit(new pcl::PointCloud<pcl::PointXYZ>);
         std::cout << "width: " << cloud->width << "height: " << cloud->height << std::endl;
         int prev_Count = cloud->width << cloud->height;
@@ -549,10 +550,11 @@ int main(int argc, char **argv)
             cloud_limit->points.push_back(pt);
         }
         std::cout << "size limit to: " << cloud_limit->points.size();
+        */
 
         //sample by pcl
         pcl::VoxelGrid<pcl::PointXYZ> sor;//滤波处理对象
-        sor.setInputCloud(cloud_limit);
+        sor.setInputCloud(cloud);
         sor.setLeafSize(SAMPLE_GRID, SAMPLE_GRID, SAMPLE_GRID);//设置滤波器处理时采用的体素大小的参数
         sor.filter(*cloud_sampled);  
 
@@ -574,13 +576,13 @@ int main(int argc, char **argv)
         #endif
 
         //cuda sample
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cuda_cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
-        voxelgrid_cuda(cloud_limit, cuda_cloud_sampled);
+        //pcl::PointCloud<pcl::PointXYZ>::Ptr cuda_cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
+        //voxelgrid_cuda(cloud_limit, cuda_cloud_sampled);
         //get ground using RANSIC
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         int rotate_angle1 = 0;
-        cuda_get_floor(cuda_cloud_sampled, ground_point1, off_ground_point1, &rotate_angle1);
+        cuda_get_floor(cloud_sampled, ground_point1, off_ground_point1, &rotate_angle1);
 
         //rotate as camera angle
         //rotate_angle = CAMERA_ROTATE_DEFAULT;
