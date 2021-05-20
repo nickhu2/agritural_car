@@ -221,6 +221,9 @@ include_directories(
 # catkin_add_nosetests(test)
 
 
+link_directories(${catkin_LIB_DIRS} lib)
+
+
 add_executable(data_process src/data_process.cpp src/image_process.cpp)
 target_link_libraries(
 data_process
