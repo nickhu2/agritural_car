@@ -43,6 +43,9 @@ static int32_t getFileNum(const std::string &path) {   //需要用到<dirent.h>�
     return fileNum;
 }
 
+
+
+/* the point number of cloudSrc should be limit, or the function will core dump */
 void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloudDst)
 {
@@ -54,11 +57,6 @@ void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
   cudaStreamCreate ( &stream );
 
   unsigned int nCount = cloudSrc->width * cloudSrc->height;
-
-  unsigned int nCount_prev = nCount;
-  nCount = (nCount > POINT_NUM_LIMITED) ? POINT_NUM_LIMITED : nCount;
-
-  std::cout << "priv nCount: " << nCount_prev << "limit nCount: " << nCount << std::endl;
 
   float *inputData = (float *)cloudSrc->points.data();
 
@@ -129,6 +127,108 @@ void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
   cudaFree(output);
   cudaStreamDestroy(stream);
 }
+
+void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+    pcl::PointCloud<pcl::PointXYZ>::Ptr ground,
+    pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground)
+{
+  std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+  std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+  std::chrono::duration<double, std::ratio<1, 1000>> time_span =
+     std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1000>>>(t2 - t1);
+
+  cudaStream_t stream = NULL;
+  cudaStreamCreate(&stream);
+
+  int nCount = cloud->width * cloud->height;
+  float *inputData = (float *)cloud->points.data();
+
+  float *input = NULL;
+  cudaMallocManaged(&input, sizeof(float) * 4 * nCount, cudaMemAttachHost);
+  cudaStreamAttachMemAsync (stream, input);
+  //cudaMemcpyAsync(input, inputData, sizeof(float) * 4 * nCount, cudaMemcpyHostToDevice, stream);
+  cudaStreamSynchronize(stream);
+
+  int *index = NULL;
+  // index should >= nCount of maximum inputdata,
+  // index can be used for multi-inputs, be allocated and freed just at beginning and end
+  cudaMallocManaged(&index, sizeof(int) * nCount, cudaMemAttachHost);
+  cudaStreamAttachMemAsync (stream, index);
+  cudaStreamSynchronize(stream);
+  // modelCoefficients can be used for multi-inputs, be allocated and freed just at beginning and end
+  float *modelCoefficients = NULL;
+  int modelSize = 4;
+  cudaMallocManaged(&modelCoefficients, sizeof(float) * modelSize, cudaMemAttachHost);
+  cudaStreamAttachMemAsync (stream, modelCoefficients);
+  cudaStreamSynchronize(stream);
+
+  //Now Just support: SAC_RANSAC + SACMODEL_PLANE
+  cudaSegmentation cudaSeg(SACMODEL_PLANE, SAC_RANSAC, stream);
+
+  double threshold = RANSIC_DISTANCE_THRESHOLD;
+  bool optimizeCoefficients = true;
+  std::vector<int> indexV;
+  t1 = std::chrono::steady_clock::now();
+  segParam_t setP;
+  setP.distanceThreshold = threshold; 
+  setP.maxIterations = MAX_RANSIC_LOOP_TIMES;
+  setP.probability = 0.9;
+  setP.optimizeCoefficients = optimizeCoefficients;
+  cudaSeg.set(setP);
+  cudaMemcpyAsync(input, inputData, sizeof(float) * 4 * nCount, cudaMemcpyHostToDevice, stream);
+  cudaSeg.segment(input, nCount, index, modelCoefficients);
+
+  for(int i = 0; i < nCount; i++)
+  {
+    if(index[i] == 1) 
+    indexV.push_back(i);
+  }
+
+  t2 = std::chrono::steady_clock::now();
+  time_span = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1000>>>(t2 - t1);
+  std::cout << "CUDA segment by Time: " << time_span.count() << " ms."<< std::endl;
+
+  //std::cout << "CUDA index Size : " <<indexV.size()<< std::endl;
+
+  std::cout << "CUDA modelCoefficients: " << modelCoefficients[0]
+    <<" "<< modelCoefficients[1]
+    <<" "<< modelCoefficients[2]
+    <<" "<< modelCoefficients[3]
+    << std::endl;
+
+  ground->width  = nCount;
+  ground->height = 1;
+  ground->points.resize (ground->width * ground->height);
+
+  off_ground->width  = nCount;
+  off_ground->height = 1;
+  off_ground->points.resize (cloudDst->width * cloudDst->height);
+
+  int check = 0;
+  for (std::size_t i = 0; i < nCount; ++i)
+  {
+    if (index[i] == 1)
+    {
+      ground->points[i].x = input[i*4+0];
+      ground->points[i].y = input[i*4+1];
+      ground->points[i].z = input[i*4+2];
+      check++;
+    }
+    else if (index[i] != 1)
+    {
+      off_ground->points[i].x = input[i*4+0];
+      off_ground->points[i].y = input[i*4+1];
+      off_ground->points[i].z = input[i*4+2];
+    }
+  }
+
+  std::cout << "CUDA find points: " << check << std::endl;
+
+  cudaFree(input);
+  cudaFree(index);
+  cudaFree(modelCoefficients);
+}
+
 
 
 int32_t separate_ground(const pcl::PointCloud<pcl::PointXYZ>::Ptr input,
@@ -400,9 +500,6 @@ int main(int argc, char **argv)
         cout<<"[sample time]: "<<  (tv_tag1.tv_sec*1000000 + tv_tag1.tv_usec) - (tv_begin.tv_sec*1000000 + tv_begin.tv_usec)<<endl;
         #endif
 
-        //sample by cuda
-        voxelgrid_cuda(cloud, cuda_cloud_sampled);
-
         //get ground using RANSIC
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point(new pcl::PointCloud<pcl::PointXYZ>);
@@ -413,6 +510,11 @@ int main(int argc, char **argv)
         gettimeofday(&tv_tag2, NULL);
         cout<<"[RANSAC time]: "<<  (tv_tag2.tv_sec*1000000 + tv_tag2.tv_usec) - (tv_tag1.tv_sec*1000000 + tv_tag1.tv_usec)<<endl;
         #endif
+
+        //get ground using RANSIC
+        pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
+        cuda_get_floor(cloud_sampled, ground_point1, off_ground_point1);
 
         //rotate as camera angle
         //rotate_angle = CAMERA_ROTATE_DEFAULT;
