@@ -54,6 +54,12 @@ void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
   cudaStreamCreate ( &stream );
 
   unsigned int nCount = cloudSrc->width * cloudSrc->height;
+
+  unsigned int nCount_prev = nCount;
+  nCount = (nCount > POINT_NUM_LIMITED) ? POINT_NUM_LIMITED : nCount;
+
+  count << "priv nCount: " << nCount_prev << "limit nCount: " << endl;
+
   float *inputData = (float *)cloudSrc->points.data();
 
 

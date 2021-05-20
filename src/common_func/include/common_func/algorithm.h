@@ -28,6 +28,8 @@
 #define CAR_HEIGHT_MAX					(2)
 #define CAR_WITH_MAX					(0.8)
 
+#define POINT_NUM_LIMITED				(500000)
+
 // map relative
 #define POINT_ONCE_ACCU					(50)
 #define MAP_VALID_ROW_NUM				(40)
