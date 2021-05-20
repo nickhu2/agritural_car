@@ -16,7 +16,6 @@
 #include <sys/time.h>
 
 #include <chrono>
-#include <cuda_runtime.h>
 
 #include "common_func/algorithm.h"
 #include "data_process/image_process.h"
