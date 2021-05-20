@@ -131,7 +131,8 @@ void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
 
 void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
     pcl::PointCloud<pcl::PointXYZ>::Ptr ground,
-    pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground)
+    pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground,
+    int32_t *rotate_angle)
 {
   std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
   std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
@@ -222,6 +223,55 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
       off_ground->points[i].z = input[i*4+2];
     }
   }
+
+  //calculate slope
+  int angle = 0;
+  int angle_valid_times = 0;
+  for(uint32_t i = 0; (i < 50) && (angle_valid_times < 10); i++)
+  {
+        uint32_t index1 = rand()%check;
+        x1 = ground->points[index1].x;
+        y1 = ground->points[index1].y;
+        z1 = ground->points[index1].z;
+
+        uint32_t index2 = rand()%check;
+        x2 = ground->points[index2].x;
+        y2 = ground->points[index2].y;
+        z2 = ground->points[index2].z;
+
+        uint32_t index3 = rand()%check;
+        x3 = ground->points[index3].x;
+        y3 = ground->points[index3].y;
+        z3 = ground->points[index3].z;
+
+        //计算平面系数
+        float a, b, c, d, sqrt_abc;
+        a = (y2 - y1) * (z3 - z1) - (z2 - z1) * (y3 - y1);
+        b = (z2 - z1) * (x3 - x1) - (x2 - x1) * (z3 - z1);
+        c = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
+        d = -(a * x1 + b * y1 + c * z1);
+        sqrt_abc = sqrt(a * a + b * b + c * c);
+
+        //理论上地面和摄像头Y轴平行，因此计算地面和XZ平面的夹角粗略认为是摄像头的俯视角
+        if(c == 0)
+        {
+            continue;
+        }
+        double camera_angle = atan(a / c);
+        camera_angle *= (180/M_PI);
+        //cout << "get angel: " << camera_angle <<endl;
+
+        if((camera_angle < CAMERA_ROTATE_MIN) || (camera_angle > CAMERA_ROTATE_MAX))
+        {
+            continue;
+        }
+
+        angle += camera_angle;
+        angle_valid_times++;
+  }
+
+  *rotate_angle = (angle_valid_times == 0) ? (-1 * (CAMERA_ROTATE_MIN + CAMERA_ROTATE_MIN) / 2) : -1 * (angle / angle_valid_times);
+  std::cout << "CUDA calculate angle: " << rotate_angle << std::endl;
 
   std::cout << "CUDA find points: " << check << std::endl;
 
