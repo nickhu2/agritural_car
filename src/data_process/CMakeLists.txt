@@ -227,6 +227,8 @@ data_process
 ${catkin_LIBRARIES}
 ${PCL_LIBRARIES}
 ${OpenCV_LIBRARIES}
-${CUDA_LIBRARIES})
+${CUDA_LIBRARIES}
+cudafilter
+cudasegmentation)
 
 add_dependencies(data_process data_process_generate_messages_cpp)
