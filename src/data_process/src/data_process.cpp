@@ -493,7 +493,7 @@ int main(int argc, char **argv)
         int prev_Count = cloud->width << cloud->height;
         for(int32_t i = 0; (i < POINT_NUM_LIMITED) && (i < prev_Count); i++)
         {
-            pcl::PointXYZ pt = input->points[point_index];
+            pcl::PointXYZ pt = cloud->points[i];
             cloud_limit->points.push_back(pt);
         }
         std::cout << "size limit to: " << cloud_limit->points.size();
@@ -523,7 +523,7 @@ int main(int argc, char **argv)
 
         //cuda sample
         pcl::PointCloud<pcl::PointXYZ>::Ptr cuda_cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
-        voxelgrid_cuda(cloud_limit, cuda_cloud_sampled)
+        voxelgrid_cuda(cloud_limit, cuda_cloud_sampled);
         //get ground using RANSIC
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
