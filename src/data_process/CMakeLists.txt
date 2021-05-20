@@ -132,6 +132,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
+  ${CUDA_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -225,6 +226,7 @@ target_link_libraries(
 data_process
 ${catkin_LIBRARIES}
 ${PCL_LIBRARIES}
-${OpenCV_LIBRARIES})
+${OpenCV_LIBRARIES}
+${CUDA_LIBRARIES})
 
 add_dependencies(data_process data_process_generate_messages_cpp)
