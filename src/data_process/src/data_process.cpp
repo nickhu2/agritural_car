@@ -15,6 +15,9 @@
 #include <dirent.h>
 #include <sys/time.h>
 
+#include <chrono>
+#include "cuda_runtime.h"
+
 #include "common_func/algorithm.h"
 #include "data_process/image_process.h"
 
@@ -38,6 +41,87 @@ static int32_t getFileNum(const std::string &path) {   //需要用到<dirent.h>�
     }
     closedir(pDir);
     return fileNum;
+}
+
+void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloudDst)
+{
+  std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+  std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+  std::chrono::duration<double, std::ratio<1, 1000>> time_span =
+     std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1000>>>(t2 - t1);
+  cudaStream_t stream = NULL;
+  cudaStreamCreate ( &stream );
+
+  unsigned int nCount = cloudSrc->width * cloudSrc->height;
+  float *inputData = (float *)cloudSrc->points.data();
+
+
+
+  std::cout << "\n------------checking CUDA ---------------- "<< std::endl;
+  std::cout << "CUDA Loaded "
+      << cloudSrc->width*cloudSrc->height
+      << " data points from PCD file with the following fields: "
+      << pcl::getFieldsList (*cloudSrc)
+      << std::endl;
+
+  float *input = NULL;
+  cudaMallocManaged(&input, sizeof(float) * 4 * nCount, cudaMemAttachHost);
+  cudaStreamAttachMemAsync (stream, input );
+  cudaMemcpyAsync(input, inputData, sizeof(float) * 4 * nCount, cudaMemcpyHostToDevice, stream);
+  cudaStreamSynchronize(stream);
+
+  float *output = NULL;
+  cudaMallocManaged(&output, sizeof(float) * 4 * nCount, cudaMemAttachHost);
+  cudaStreamAttachMemAsync (stream, output );
+  cudaStreamSynchronize(stream);
+
+  cudaFilter filterTest(stream);
+  FilterParam_t setP;
+  FilterType_t type;
+
+
+  unsigned int countLeft = 0;
+  std::cout << "\n------------checking CUDA VoxelGrid---------------- "<< std::endl;
+
+  type = VOXELGRID;
+
+  setP.type = type;
+  setP.voxelX = 1;
+  setP.voxelY = 1;
+  setP.voxelZ = 1;
+
+  filterTest.set(setP);
+  int status = 0;
+  cudaDeviceSynchronize();
+  t1 = std::chrono::steady_clock::now();
+  status = filterTest.filter(output, &countLeft, input, nCount);
+  cudaDeviceSynchronize();
+  t2 = std::chrono::steady_clock::now();
+
+  if (status != 0)
+    return;
+  time_span = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1000>>>(t2 - t1);
+  std::cout << "CUDA VoxelGrid by Time: " << time_span.count() << " ms."<< std::endl;
+  std::cout << "CUDA VoxelGrid before filtering: " << nCount << std::endl;
+  std::cout << "CUDA VoxelGrid after filtering: " << countLeft << std::endl;
+
+  cloudDst->width = countLeft;
+  cloudDst->height = 1;
+  cloudDst->points.resize (cloudDst->width * cloudDst->height);
+
+  int check = 0;
+  for (std::size_t i = 0; i < cloudDst->size(); ++i)
+  {
+      cloudDst->points[i].x = output[i*4+0];
+      cloudDst->points[i].y = output[i*4+1];
+      cloudDst->points[i].z = output[i*4+2];
+  }
+
+
+  cudaFree(input);
+  cudaFree(output);
+  cudaStreamDestroy(stream);
 }
 
 
@@ -286,6 +370,7 @@ int main(int argc, char **argv)
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cuda_cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
         // 填入点云数据
         if(pcl::io::loadPCDFile(file_name, *cloud) < 0)
         {
@@ -298,7 +383,7 @@ int main(int argc, char **argv)
 
 
 
-        //sample
+        //sample by pcl
         pcl::VoxelGrid<pcl::PointXYZ> sor;//滤波处理对象
         sor.setInputCloud(cloud);
         sor.setLeafSize(SAMPLE_GRID, SAMPLE_GRID, SAMPLE_GRID);//设置滤波器处理时采用的体素大小的参数
@@ -308,6 +393,9 @@ int main(int argc, char **argv)
         gettimeofday(&tv_tag1, NULL);
         cout<<"[sample time]: "<<  (tv_tag1.tv_sec*1000000 + tv_tag1.tv_usec) - (tv_begin.tv_sec*1000000 + tv_begin.tv_usec)<<endl;
         #endif
+
+        //sample by cuda
+        voxelgrid_cuda(cloud, cuda_cloud_sampled);
 
         //get ground using RANSIC
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point(new pcl::PointCloud<pcl::PointXYZ>);

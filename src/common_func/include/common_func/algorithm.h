@@ -56,4 +56,30 @@
 #define PLOT_PATH						(1)
 #define FIGURE_DEBUG					(0)
 
+
+
+
+
+typedef enum {
+    PASSTHROUGH = 0,
+    VOXELGRID = 1,
+} FilterType_t;
+
+typedef struct {
+    FilterType_t type;
+    //0=x,1=y,2=z
+    //type PASSTHROUGH
+    int dim;
+    float upFilterLimits;
+    float downFilterLimits;
+    bool limitsNegative;
+    //type VOXELGRID
+    float voxelX;
+    float voxelY;
+    float voxelZ;
+
+} FilterParam_t;
+
+
+
 #endif
