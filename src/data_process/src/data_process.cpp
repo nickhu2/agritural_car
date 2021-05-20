@@ -229,6 +229,8 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
   int angle_valid_times = 0;
   for(uint32_t i = 0; (i < 50) && (angle_valid_times < 10); i++)
   {
+        float x1, y1, z1, x2, y2, z2, x3, y3, z3;
+
         uint32_t index1 = rand()%check;
         x1 = ground->points[index1].x;
         y1 = ground->points[index1].y;
