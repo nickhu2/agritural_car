@@ -173,7 +173,7 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
   segParam_t setP;
   setP.distanceThreshold = threshold; 
   setP.maxIterations = MAX_RANSIC_LOOP_TIMES;
-  setP.probability = 0.9;
+  setP.probability = 0.95;
   setP.optimizeCoefficients = optimizeCoefficients;
   cudaSeg.set(setP);
   cudaMemcpyAsync(input, inputData, sizeof(float) * 4 * nCount, cudaMemcpyHostToDevice, stream);
@@ -477,7 +477,6 @@ int main(int argc, char **argv)
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cuda_cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
         // 填入点云数据
         if(pcl::io::loadPCDFile(file_name, *cloud) < 0)
         {
@@ -488,11 +487,20 @@ int main(int argc, char **argv)
         std::cerr << "Cloud before filtering:" << std::endl;
         std::cerr << *cloud << std::endl;
 
-
+        // 限制点云数量
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_limit(new pcl::PointCloud<pcl::PointXYZ>);
+        std::cout << "width: " << cloud->width << "height: " << cloud->height << std::endl;
+        int prev_Count = cloud->width << cloud->height;
+        for(int32_t i = 0; (i < POINT_NUM_LIMITED) && (i < prev_Count); i++)
+        {
+            pcl::PointXYZ pt = input->points[point_index];
+            cloud_limit->points.push_back(pt);
+        }
+        std::cout << "size limit to: " << cloud_limit->points.size();
 
         //sample by pcl
         pcl::VoxelGrid<pcl::PointXYZ> sor;//滤波处理对象
-        sor.setInputCloud(cloud);
+        sor.setInputCloud(cloud_limit);
         sor.setLeafSize(SAMPLE_GRID, SAMPLE_GRID, SAMPLE_GRID);//设置滤波器处理时采用的体素大小的参数
         sor.filter(*cloud_sampled);  
 
@@ -500,6 +508,7 @@ int main(int argc, char **argv)
         gettimeofday(&tv_tag1, NULL);
         cout<<"[sample time]: "<<  (tv_tag1.tv_sec*1000000 + tv_tag1.tv_usec) - (tv_begin.tv_sec*1000000 + tv_begin.tv_usec)<<endl;
         #endif
+
 
         //get ground using RANSIC
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point(new pcl::PointCloud<pcl::PointXYZ>);
@@ -512,10 +521,14 @@ int main(int argc, char **argv)
         cout<<"[RANSAC time]: "<<  (tv_tag2.tv_sec*1000000 + tv_tag2.tv_usec) - (tv_tag1.tv_sec*1000000 + tv_tag1.tv_usec)<<endl;
         #endif
 
+        //cuda sample
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cuda_cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
+        voxelgrid_cuda(cloud_limit, cuda_cloud_sampled)
         //get ground using RANSIC
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
-        cuda_get_floor(cloud_sampled, ground_point1, off_ground_point1);
+        int rotate_angle1 = 0;
+        cuda_get_floor(cuda_cloud_sampled, ground_point1, off_ground_point1, &rotate_angle1);
 
         //rotate as camera angle
         //rotate_angle = CAMERA_ROTATE_DEFAULT;
