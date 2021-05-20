@@ -17,9 +17,10 @@
 
 #include <chrono>
 
+
 #include "common_func/algorithm.h"
 #include "data_process/image_process.h"
-
+#include "common_func/cudaFilter.h"
 
 using namespace std;
 static float floor_height = 0.0;
