@@ -13,6 +13,7 @@
 #include <pcl/point_types.h>
 #include <unordered_set>
 #include <dirent.h>
+#include <sys/time.h>
 
 #include "common_func/algorithm.h"
 #include "data_process/image_process.h"
@@ -38,6 +39,7 @@ static int32_t getFileNum(const std::string &path) {   //需要用到<dirent.h>�
     closedir(pDir);
     return fileNum;
 }
+
 
 int32_t separate_ground(const pcl::PointCloud<pcl::PointXYZ>::Ptr input,
     pcl::PointCloud<pcl::PointXYZ>::Ptr ground,
@@ -266,13 +268,21 @@ int main(int argc, char **argv)
     pcd_num = getFileNum(PCD_FILE_DIR);
     char file_name[100] = {0};
     cout << "total " << pcd_num << " .pcd file" << endl;
-    
+
+    #if(DEBUG_TIME_PRINT)
+    struct timeval tv_begin, tv_tag1, tv_tag2, tv_tag3, tv_tag4, tv_tag5;
+    #endif
+
     while(pcd_index < pcd_num)
     {
         memset(file_name, 0, 100);
         sprintf(file_name, PCD_FILE_DIR"cloud_pont_%d.pcd", pcd_index);
         cout<<"[begin] process pcf file: " << file_name<<endl;
 
+
+        #if(DEBUG_TIME_PRINT)
+        gettimeofday(&tv_begin, NULL);
+        #endif
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
@@ -294,12 +304,21 @@ int main(int argc, char **argv)
         sor.setLeafSize(SAMPLE_GRID, SAMPLE_GRID, SAMPLE_GRID);//设置滤波器处理时采用的体素大小的参数
         sor.filter(*cloud_sampled);  
 
+        #if(DEBUG_TIME_PRINT)
+        gettimeofday(&tv_tag1, NULL);
+        cout<<"[sample time]: "<<  (tv_tag1.tv_sec*1000000 + tv_tag1.tv_usec) - (tv_begin.tv_sec*1000000 + tv_begin.tv_usec)<<endl;
+        #endif
 
         //get ground using RANSIC
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point(new pcl::PointCloud<pcl::PointXYZ>);
         int rotate_angle = 0;
         separate_ground(cloud_sampled, ground_point, off_ground_point, &rotate_angle);
+
+        #if(DEBUG_TIME_PRINT)
+        gettimeofday(&tv_tag2, NULL);
+        cout<<"[RANSAC time]: "<<  (tv_tag2.tv_sec*1000000 + tv_tag2.tv_usec) - (tv_tag1.tv_sec*1000000 + tv_tag1.tv_usec)<<endl;
+        #endif
 
         //rotate as camera angle
         //rotate_angle = CAMERA_ROTATE_DEFAULT;
@@ -312,6 +331,10 @@ int main(int argc, char **argv)
         pcl::transformPointCloud (*ground_point, *ground_transformed, transform);
         pcl::transformPointCloud (*off_ground_point, *off_ground_transformed, transform);
 
+        #if(DEBUG_TIME_PRINT)
+        gettimeofday(&tv_tag3, NULL);
+        cout<<"[rotate time]: "<<  (tv_tag3.tv_sec*1000000 + tv_tag3.tv_usec) - (tv_tag2.tv_sec*1000000 + tv_tag2.tv_usec)<<endl;
+        #endif
 
         floor_height = calculate_floor_hight(ground_transformed);
         cout << "average floor height: " << floor_height << endl;
@@ -327,6 +350,11 @@ int main(int argc, char **argv)
         uchar map_temp[MAP_ROW_NUM][MAP_COL_NUM] = {0};
         pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_obstacle (new pcl::PointCloud<pcl::PointXYZ> ());
         get_aera_map(off_ground_transformed, filtered_obstacle, map_temp);
+
+        #if(DEBUG_TIME_PRINT)
+        gettimeofday(&tv_tag4, NULL);
+        cout<<"[3D-2D time]: "<<  (tv_tag4.tv_sec*1000000 + tv_tag4.tv_usec) - (tv_tag3.tv_sec*1000000 + tv_tag3.tv_usec)<<endl;
+        #endif
 
         //new 2D array to store map(get part map)
 
@@ -413,6 +441,11 @@ int main(int argc, char **argv)
                 }
             }
 
+            #if(DEBUG_TIME_PRINT)
+            gettimeofday(&tv_tag5, NULL);
+            cout<<"[opencv proc time]: "<<  (tv_tag5.tv_sec*1000000 + tv_tag5.tv_usec) - (tv_tag4.tv_sec*1000000 + tv_tag4.tv_usec)<<endl;
+            #endif
+
             #if(PLOT_PATH)
             int row_index = 0;
             int col_index = 0;
@@ -437,6 +470,7 @@ int main(int argc, char **argv)
 
         cout << "path_valid: " << path_valid << " end_point, row: " << end_x << " col: " << end_y << endl;
 
+        #if(FIGURE_DEBUG)
         if(1)
         {
 
@@ -506,7 +540,7 @@ int main(int argc, char **argv)
 
 
         }
-
+        #endif
 
 
 
