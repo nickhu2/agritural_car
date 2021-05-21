@@ -8,10 +8,11 @@
 #include "ros/ros.h"
 
 
-#define PROG_PWM_SERVO_VALUE	"/prog/pwm_servo"
-#define PROG_PWM_MOTOR_VALUE	"/prog/pwm_motor"
-#define PROG_STATUS_TOPIC		"/prog/task_status"
-#define RC_CTRL_INFO			"/rc_control_info"
+#define PROG_PWM_SERVO_VALUE			"/prog/pwm_servo"
+#define PROG_PWM_MOTOR_VALUE			"/prog/pwm_motor"
+#define PROG_SAMPLE_STATUS_TOPIC		"/prog/task_sample_status"
+#define PROG_NAV_STATUS_TOPIC			"/prog/task_nav_status"
+#define RC_CTRL_INFO					"/rc_control_info"
 
 
 #define PROG_TASK_READY			(0x1)
@@ -23,6 +24,7 @@ typedef enum
 {
     MANUAL_MODE = 0,
     AUTO_MODE = 1,
+    SAMPLE_MODE = 2,
 } WORK_MODE_t;
 
 typedef enum

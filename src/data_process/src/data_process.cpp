@@ -14,8 +14,16 @@
 #include <unordered_set>
 #include <dirent.h>
 #include <sys/time.h>
-
 #include <chrono>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/image_encodings.h>
+#include <std_msgs/UInt64.h>
+#include <std_msgs/UInt8.h>
+
+#include "ros/ros.h"
+#include "std_msgs/String.h"
+#include "common_func/move_ctrl.h"
 
 
 #include "common_func/algorithm.h"
@@ -507,8 +515,9 @@ static float calculate_floor_hight(const pcl::PointCloud<pcl::PointXYZ>::Ptr inp
 
 
 
-int main(int argc, char **argv)
+static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
 {
+  /*
     int32_t pcd_num = 0;
     int32_t pcd_index = 0;
     int32_t i = 0, j = 0;
@@ -516,9 +525,7 @@ int main(int argc, char **argv)
     char file_name[100] = {0};
     cout << "total " << pcd_num << " .pcd file" << endl;
 
-    #if(DEBUG_TIME_PRINT)
-    struct timeval tv_begin, tv_tag1, tv_tag2, tv_tag3, tv_tag4, tv_tag5;
-    #endif
+
 
     while(pcd_index < pcd_num)
     {
@@ -527,9 +534,6 @@ int main(int argc, char **argv)
         cout<<"[begin] process pcf file: " << file_name<<endl;
 
 
-        #if(DEBUG_TIME_PRINT)
-        gettimeofday(&tv_begin, NULL);
-        #endif
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
@@ -539,9 +543,15 @@ int main(int argc, char **argv)
             pcd_index++;
             continue;
         }
+  */
 
         std::cerr << "Cloud before filtering:" << std::endl;
         std::cerr << *cloud << std::endl;
+
+        #if(DEBUG_TIME_PRINT)
+        struct timeval tv_begin, tv_tag1, tv_tag2, tv_tag3, tv_tag4, tv_tag5;
+        gettimeofday(&tv_begin, NULL);
+        #endif
 
         // 限制点云数量
         /*
@@ -814,18 +824,106 @@ int main(int argc, char **argv)
         }
         #endif
 
-
-
-
-
-
+/*
         pcd_index++;
     }
+*/
+
+  return 0;
+}
+
+
+static bool navigation_switch = false;
+static ros::Publisher *status_publisher = NULL;
+
+
+
+void pointcloud2_process_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
+{
+  ROS_INFO("nick enter pointcloud2_process_callback");
+  if(navigation_switch == false)
+  {
+    return;
+  }
+
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  pcl::fromROSMsg(*msg, cloud);
+
+  //processing cloud point
+  cloud_proc(cloud.makeShared);
+}
+
+
+void rc_info_callback_process(const std_msgs::UInt64::ConstPtr& msg)
+{
+  //ROS_INFO("nick enter rc_info_callback_process");
+  static uint16_t last_work_status = PAUSE;
+  static uint16_t cur_work_status = PAUSE;
+
+
+  uint64_t recv_data = msg->data;
+  uint16_t work_mode = recv_data & 0xFFFF;
+  uint16_t work_status = (recv_data >> 16) & 0xFFFF;
+
+  if(AUTO_MODE == work_mode)
+  {
+      last_work_status = cur_work_status;
+      cur_work_status = work_status;
+
+      if((last_work_status == PAUSE) && (cur_work_status == PAUSE))   { navigation_switch = false; }
+
+      if((last_work_status == PAUSE) && (cur_work_status == WORKING))
+      {
+        navigation_switch = false;
+        //send begin navigation flag to pwm ctrl
+        std_msgs::UInt8 msg;
+        msg.data = PROG_TASK_BEGIN;
+        status_publisher->publish(msg);
+      }
+
+      if((last_work_status == WORKING) && (cur_work_status == WORKING))
+      {
+        //enable navigation
+        navigation_switch = true;
+      }
+
+      if((last_work_status == WORKING) && (cur_work_status == PAUSE))
+      {
+          navigation_switch = false;
+          //send stop navigation flag to pwm ctrl
+          std_msgs::UInt8 msg;
+          msg.data = PROG_TASK_END;
+          status_publisher->publish(msg);
+      }
+  }
+}
 
 
 
 
+int main(int argc, char **argv)
+{
+  ros::init(argc, argv, "listener");
 
+
+  ros::NodeHandle point_handle;
+  ros::NodeHandle rc_handle;
+  ros::NodeHandle nav_status;  
+
+  ros::Subscriber pointcloud2_sub = point_handle.subscribe("/zed/zed_node/point_cloud/cloud_registered", 10, pointcloud2_process_callback);
+  ros::Subscriber rc_info = rc_handle.subscribe(RC_CTRL_INFO, 100, rc_info_callback_process);
+
+  ros::Publisher chatter_pub = nav_status.advertise<std_msgs::UInt8>(PROG_NAV_STATUS_TOPIC, 100);
+  status_publisher = &chatter_pub;
+
+  //wait PWM ready
+  sleep(3);
+
+  std_msgs::UInt8 msg;
+  msg.data = PROG_TASK_READY;
+  status_publisher->publish(msg);
+
+  ros::spin();
 
   return 0;
 }

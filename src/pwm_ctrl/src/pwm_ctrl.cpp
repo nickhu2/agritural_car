@@ -45,7 +45,6 @@ using namespace std;
 static WORK_STATUS_t local_work_status = PAUSE;
 static bool pwm_is_used_by_program = false;
 
-#define WORK_MODE_DEFAULT   (MANUAL_MODE)
 #define WORK_STATUS_DEFAULT (PAUSE)
 #define MAX_CHANNELS        (16)
 #define WORK_MODE_CHANNEL   (6)
@@ -117,7 +116,7 @@ static int decode_value(uint8_t* buf, int len, uint8_t *frame_data, ctrl_desc_t 
                 if(out[WORK_MODE_CHANNEL - 1] < WORK_MODE_THRESHOLD1)
                     desc->work_mode = MANUAL_MODE;
                 else if(out[WORK_MODE_CHANNEL - 1] > WORK_MODE_THRESHOLD2)
-                    desc->work_mode = WORK_MODE_DEFAULT;
+                    desc->work_mode = SAMPLE_MODE;
                 else
                     desc->work_mode = AUTO_MODE;
 
@@ -254,7 +253,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "talker");
     ros::NodeHandle n;
     ros::Publisher chatter_pub = n.advertise<std_msgs::UInt64>(RC_CTRL_INFO, 1000);
-    ros::Subscriber pgro_status_sub = n.subscribe(PROG_STATUS_TOPIC, 100, rc_info_callback);
+    ros::Subscriber pgro_status_sub = n.subscribe(PROG_SAMPLE_STATUS_TOPIC, 100, rc_info_callback);
 
 
     ros::Rate loop_rate(LOOP_RATE_DEFAULT);
