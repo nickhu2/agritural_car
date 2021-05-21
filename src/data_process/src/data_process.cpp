@@ -207,15 +207,17 @@ int32_t cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
     pt.z = input[i*4+2];
 
     //手动增加范围过滤无效点
-    if ((index[i] != 1)||((ptx < X_VALID_MIN) || (ptx > X_VALID_MAX) || (pty < Y_VALID_MIN) || (pty > Y_VALID_MAX) || (ptz < Z_VALID_MIN) || (ptz > Z_VALID_MAX)))
+    if((index[i] != 1)||((ptx < X_VALID_MIN) || (ptx > X_VALID_MAX)
+      || (pty < Y_VALID_MIN) || (pty > Y_VALID_MAX) || (ptz < Z_VALID_MIN) || (ptz > Z_VALID_MAX)))
     {
         off_ground->points.push_back(pt);
     }
-    else if ((index[i] == 1)
+    else
     {
         ground->points.push_back(pt);
         check++;
     }
+  }
 
   cudaFree(input);
   cudaFree(index);
