@@ -129,7 +129,7 @@ void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
   cudaStreamDestroy(stream);
 }
 
-void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+int32_t cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
     pcl::PointCloud<pcl::PointXYZ>::Ptr ground,
     pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground,
     int32_t *rotate_angle)
@@ -206,18 +206,28 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
     pt.y = input[i*4+1];
     pt.z = input[i*4+2];
 
-    if (index[i] == 1)
+    //手动增加范围过滤无效点
+    if ((index[i] != 1)||((ptx < X_VALID_MIN) || (ptx > X_VALID_MAX) || (pty < Y_VALID_MIN) || (pty > Y_VALID_MAX) || (ptz < Z_VALID_MIN) || (ptz > Z_VALID_MAX)))
+    {
+        off_ground->points.push_back(pt);
+    }
+    else if ((index[i] == 1)
     {
         ground->points.push_back(pt);
         check++;
     }
-    else if (index[i] != 1)
-    {
-        off_ground->points.push_back(pt);
-    }
-  }
+
+  cudaFree(input);
+  cudaFree(index);
+  cudaFree(modelCoefficients);
 
   cout<<"cuda total points "<<nCount << " ground points: " << check <<endl;
+  if(check == 0)
+  {
+     cout << "no plane detected" << end;
+     return -1;
+  }
+
   //calculate slope
   int angle = 0;
   int angle_valid_times = 0;
@@ -271,9 +281,7 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 
   std::cout << "CUDA find points: " << check << std::endl;
 
-  cudaFree(input);
-  cudaFree(index);
-  cudaFree(modelCoefficients);
+  return 0;
 }
 
 
@@ -576,7 +584,11 @@ int main(int argc, char **argv)
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         int rotate_angle1 = 0;
-        cuda_get_floor(cloud, ground_point, off_ground_point, &rotate_angle1);
+        
+        if(cuda_get_floor(cloud_sampled, ground_point, off_ground_point, &rotate_angle1) != 0)
+        {
+            continue;
+        }
 
         //rotate as camera angle
         //rotate_angle = CAMERA_ROTATE_DEFAULT;
