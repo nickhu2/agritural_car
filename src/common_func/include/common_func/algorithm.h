@@ -8,8 +8,8 @@
 
 #define SAMPLE_GRID						(0.1f)
 
-#define MAX_RANSIC_LOOP_TIMES			(30)
-#define RANSIC_DISTANCE_THRESHOLD		(0.1)
+#define MAX_RANSIC_LOOP_TIMES			(50)
+#define RANSIC_DISTANCE_THRESHOLD		(0.15)
 
 #define X_VALID_MIN						(0)
 #define X_VALID_MAX						(8)

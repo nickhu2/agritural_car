@@ -174,7 +174,7 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
   segParam_t setP;
   setP.distanceThreshold = threshold; 
   setP.maxIterations = MAX_RANSIC_LOOP_TIMES;
-  setP.probability = 0.95;
+  setP.probability = 0.9;
   setP.optimizeCoefficients = optimizeCoefficients;
   cudaSeg.set(setP);
   cudaMemcpyAsync(input, inputData, sizeof(float) * 4 * nCount, cudaMemcpyHostToDevice, stream);
