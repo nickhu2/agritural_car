@@ -273,7 +273,7 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
   }
 
   *rotate_angle = (angle_valid_times == 0) ? (-1 * (CAMERA_ROTATE_MIN + CAMERA_ROTATE_MIN) / 2) : -1 * (angle / angle_valid_times);
-  std::cout << "CUDA calculate angle: " << rotate_angle << std::endl;
+  std::cout << "CUDA calculate angle: " << *rotate_angle << std::endl;
 
   std::cout << "CUDA find points: " << check << std::endl;
 
