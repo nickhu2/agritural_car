@@ -201,18 +201,18 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
   int check = 0;
   for (std::size_t i = 0; i < nCount; ++i)
   {
+      pt.x = input[i*4+0];
+      pt.y = input[i*4+1];
+      pt.z = input[i*4+2];
+
     if (index[i] == 1)
     {
-      ground->points[i].x = input[i*4+0];
-      ground->points[i].y = input[i*4+1];
-      ground->points[i].z = input[i*4+2];
-      check++;
+        ground->points.push_back(pt);
+        check++;
     }
     else if (index[i] != 1)
     {
-      off_ground->points[i].x = input[i*4+0];
-      off_ground->points[i].y = input[i*4+1];
-      off_ground->points[i].z = input[i*4+2];
+      off_ground->points.push_back(pt);
     }
   }
 
