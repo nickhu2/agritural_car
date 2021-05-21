@@ -198,14 +198,6 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
     <<" "<< modelCoefficients[3]
     << std::endl;
 
-  ground->width  = nCount;
-  ground->height = 1;
-  ground->points.resize (ground->width * ground->height);
-
-  off_ground->width  = nCount;
-  off_ground->height = 1;
-  off_ground->points.resize (off_ground->width * off_ground->height);
-
   int check = 0;
   for (std::size_t i = 0; i < nCount; ++i)
   {
@@ -224,6 +216,7 @@ void cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
     }
   }
 
+  cout<<"cuda total points "<<nCount << " ground points: " << check <<endl;
   //calculate slope
   int angle = 0;
   int angle_valid_times = 0;
