@@ -10,7 +10,6 @@
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/common/transforms.h> 
 #include <pcl/filters/passthrough.h>
-#include <pcl/point_types.h>
 #include <unordered_set>
 #include <dirent.h>
 #include <sys/time.h>
@@ -20,6 +19,12 @@
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/UInt64.h>
 #include <std_msgs/UInt8.h>
+
+#include <pcl/common/io.h>
+#include <pcl/impl/point_types.hpp>
+#include <pcl/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
+
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
