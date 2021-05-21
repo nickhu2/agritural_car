@@ -568,7 +568,7 @@ int main(int argc, char **argv)
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point(new pcl::PointCloud<pcl::PointXYZ>);
         int rotate_angle = 0;
-        separate_ground(cloud_sampled, ground_point, off_ground_point, &rotate_angle);
+        //separate_ground(cloud_sampled, ground_point, off_ground_point, &rotate_angle);
 
         #if(DEBUG_TIME_PRINT)
         gettimeofday(&tv_tag2, NULL);
@@ -582,7 +582,7 @@ int main(int argc, char **argv)
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         int rotate_angle1 = 0;
-        cuda_get_floor(cloud_sampled, ground_point1, off_ground_point1, &rotate_angle1);
+        cuda_get_floor(cloud_sampled, ground_point, off_ground_point, &rotate_angle1);
 
         //rotate as camera angle
         //rotate_angle = CAMERA_ROTATE_DEFAULT;
