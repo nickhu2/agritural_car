@@ -576,7 +576,7 @@ int main(int argc, char **argv)
         pcl::PointCloud<pcl::PointXYZ>::Ptr ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::PointCloud<pcl::PointXYZ>::Ptr off_ground_point1(new pcl::PointCloud<pcl::PointXYZ>);
         int rotate_angle1 = 0;
-        cuda_get_floor(cloud_sampled, ground_point, off_ground_point, &rotate_angle1);
+        cuda_get_floor(cloud, ground_point, off_ground_point, &rotate_angle1);
 
         //rotate as camera angle
         //rotate_angle = CAMERA_ROTATE_DEFAULT;
