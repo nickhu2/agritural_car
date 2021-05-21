@@ -520,7 +520,6 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
   /*
     int32_t pcd_num = 0;
     int32_t pcd_index = 0;
-    int32_t i = 0, j = 0;
     pcd_num = getFileNum(PCD_FILE_DIR);
     char file_name[100] = {0};
     cout << "total " << pcd_num << " .pcd file" << endl;
@@ -536,7 +535,6 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
 
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
         // 填入点云数据
         if(pcl::io::loadPCDFile(file_name, *cloud) < 0)
         {
@@ -544,6 +542,8 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
             continue;
         }
   */
+        int32_t i = 0, j = 0;
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
 
         std::cerr << "Cloud before filtering:" << std::endl;
         std::cerr << *cloud << std::endl;
@@ -599,7 +599,7 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
         
         if(cuda_get_floor(cloud_sampled, ground_point, off_ground_point, &rotate_angle1) != 0)
         {
-            continue;
+            return -1;
         }
 
         //rotate as camera angle
@@ -850,7 +850,8 @@ void pointcloud2_process_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
   pcl::fromROSMsg(*msg, cloud);
 
   //processing cloud point
-  cloud_proc(cloud.makeShared);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPointer = cloud.makeShared();
+  cloud_proc(cloudPointer);
 }
 
 
