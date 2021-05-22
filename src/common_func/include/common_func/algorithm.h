@@ -54,7 +54,7 @@
 
 
 //debug macros
-#define DEBUG_TIME_PRINT				(1)
+#define DEBUG_PRINT     				(0)
 #define PLOT_PATH						(1)
 #define FIGURE_DEBUG					(0)
 

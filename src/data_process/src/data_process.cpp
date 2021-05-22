@@ -74,15 +74,6 @@ void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
 
   float *inputData = (float *)cloudSrc->points.data();
 
-
-
-  std::cout << "\n------------checking CUDA ---------------- "<< std::endl;
-  std::cout << "CUDA Loaded "
-      << cloudSrc->width*cloudSrc->height
-      << " data points from PCD file with the following fields: "
-      << pcl::getFieldsList (*cloudSrc)
-      << std::endl;
-
   float *input = NULL;
   cudaMallocManaged(&input, sizeof(float) * 4 * nCount, cudaMemAttachHost);
   cudaStreamAttachMemAsync (stream, input );
@@ -100,7 +91,6 @@ void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
 
 
   unsigned int countLeft = 0;
-  std::cout << "\n------------checking CUDA VoxelGrid---------------- "<< std::endl;
 
   type = VOXELGRID;
 
@@ -120,9 +110,9 @@ void voxelgrid_cuda(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudSrc,
   if (status != 0)
     return;
   time_span = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1000>>>(t2 - t1);
+  #if(DEBUG_PRINT)
   std::cout << "CUDA VoxelGrid by Time: " << time_span.count() << " ms."<< std::endl;
-  std::cout << "CUDA VoxelGrid before filtering: " << nCount << std::endl;
-  std::cout << "CUDA VoxelGrid after filtering: " << countLeft << std::endl;
+  #endif
 
   cloudDst->width = countLeft;
   cloudDst->height = 1;
@@ -201,15 +191,9 @@ int32_t cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 
   t2 = std::chrono::steady_clock::now();
   time_span = std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1000>>>(t2 - t1);
+  #if(DEBUG_PRINT)
   std::cout << "CUDA segment by Time: " << time_span.count() << " ms."<< std::endl;
-
-  //std::cout << "CUDA index Size : " <<indexV.size()<< std::endl;
-
-  std::cout << "CUDA modelCoefficients: " << modelCoefficients[0]
-    <<" "<< modelCoefficients[1]
-    <<" "<< modelCoefficients[2]
-    <<" "<< modelCoefficients[3]
-    << std::endl;
+  #endif
 
   int check = 0;
   for (std::size_t i = 0; i < nCount; ++i)
@@ -293,8 +277,6 @@ int32_t cuda_get_floor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 
   *rotate_angle = (angle_valid_times == 0) ? (-1 * (CAMERA_ROTATE_MIN + CAMERA_ROTATE_MIN) / 2) : -1 * (angle / angle_valid_times);
   std::cout << "CUDA calculate angle: " << *rotate_angle << std::endl;
-
-  std::cout << "CUDA find points: " << check << std::endl;
 
   return 0;
 }
@@ -550,10 +532,12 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
         int32_t i = 0, j = 0;
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_sampled(new pcl::PointCloud<pcl::PointXYZ>);
 
+        #if(DEBUG_PRINT)
         std::cerr << "Cloud before filtering:" << std::endl;
         std::cerr << *cloud << std::endl;
+        #endif
 
-        #if(DEBUG_TIME_PRINT)
+        #if(DEBUG_PRINT)
         struct timeval tv_begin, tv_tag1, tv_tag2, tv_tag3, tv_tag4, tv_tag5;
         gettimeofday(&tv_begin, NULL);
         #endif
@@ -577,7 +561,7 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
         sor.setLeafSize(SAMPLE_GRID, SAMPLE_GRID, SAMPLE_GRID);//设置滤波器处理时采用的体素大小的参数
         sor.filter(*cloud_sampled);  
 
-        #if(DEBUG_TIME_PRINT)
+        #if(DEBUG_PRINT)
         gettimeofday(&tv_tag1, NULL);
         cout<<"[sample time]: "<<  (tv_tag1.tv_sec*1000000 + tv_tag1.tv_usec) - (tv_begin.tv_sec*1000000 + tv_begin.tv_usec)<<endl;
         #endif
@@ -589,7 +573,7 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
         int rotate_angle = 0;
         //separate_ground(cloud_sampled, ground_point, off_ground_point, &rotate_angle);
 
-        #if(DEBUG_TIME_PRINT)
+        #if(DEBUG_PRINT)
         gettimeofday(&tv_tag2, NULL);
         cout<<"[RANSAC time]: "<<  (tv_tag2.tv_sec*1000000 + tv_tag2.tv_usec) - (tv_tag1.tv_sec*1000000 + tv_tag1.tv_usec)<<endl;
         #endif
@@ -618,14 +602,15 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
         pcl::transformPointCloud (*ground_point, *ground_transformed, transform);
         pcl::transformPointCloud (*off_ground_point, *off_ground_transformed, transform);
 
-        #if(DEBUG_TIME_PRINT)
+        #if(DEBUG_PRINT)
         gettimeofday(&tv_tag3, NULL);
         cout<<"[rotate time]: "<<  (tv_tag3.tv_sec*1000000 + tv_tag3.tv_usec) - (tv_tag2.tv_sec*1000000 + tv_tag2.tv_usec)<<endl;
         #endif
 
         floor_height = calculate_floor_hight(ground_transformed);
+        #if(DEBUG_PRINT)
         cout << "average floor height: " << floor_height << endl;
-
+        #endif
         //障碍物点云3D转2D（除去那些过比小车高、以及在地面以下的障碍物点），绘制区域二维地图
         /*
             对于具体地图中循迹，只关心一定范围内的地图信息，此处（二维）X-min~X_max、Y_min~Y_max的一个二维矩阵，网格大小:SAMPLE_GRID;
@@ -638,7 +623,7 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
         pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_obstacle (new pcl::PointCloud<pcl::PointXYZ> ());
         get_aera_map(off_ground_transformed, filtered_obstacle, map_temp);
 
-        #if(DEBUG_TIME_PRINT)
+        #if(DEBUG_PRINT)
         gettimeofday(&tv_tag4, NULL);
         cout<<"[3D-2D time]: "<<  (tv_tag4.tv_sec*1000000 + tv_tag4.tv_usec) - (tv_tag3.tv_sec*1000000 + tv_tag3.tv_usec)<<endl;
         #endif
@@ -648,8 +633,6 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
         uchar map_formal[MAP_VALID_ROW_NUM][MAP_VALID_COL_NUM] = {0};
         uint32_t base_row = floor(CAR_WITH_MAX / PIC_GRID);
         uint32_t base_col =  floor((MAP_COL_NUM - MAP_VALID_COL_NUM) / 2);
-
-        cout << "1: " << base_row << " " << base_col <<endl;
 
         cv::Mat map_binary(MAP_VALID_ROW_NUM ,MAP_VALID_COL_NUM, CV_8UC1);
         for(i = 0; i < MAP_VALID_ROW_NUM; i++)
@@ -678,7 +661,10 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
                 break;
             }
         }
+        #if(DEBUG_PRINT)
         cout<<"start point, row: " << 0 << " col: " << start_y <<endl;
+        #endif
+
         if(j == 0)
         {
             path_valid = 0;
@@ -728,7 +714,7 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
                 }
             }
 
-            #if(DEBUG_TIME_PRINT)
+            #if(DEBUG_PRINT)
             gettimeofday(&tv_tag5, NULL);
             cout<<"[opencv proc time]: "<<  (tv_tag5.tv_sec*1000000 + tv_tag5.tv_usec) - (tv_tag4.tv_sec*1000000 + tv_tag4.tv_usec)<<endl;
             #endif
@@ -754,8 +740,9 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
 
 
         }
-
+        #if(DEBUG_PRINT)
         cout << "path_valid: " << path_valid << " end_point, row: " << end_x << " col: " << end_y << endl;
+        #endif
 
         #if(FIGURE_DEBUG)
         if(1)
