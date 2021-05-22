@@ -202,7 +202,7 @@ int main(int argc, char **argv)
 
 
 
-  ros::init(argc, argv, "listener");
+  ros::init(argc, argv, "listener_capture");
 
 
   ros::NodeHandle image_handle;

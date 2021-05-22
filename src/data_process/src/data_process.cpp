@@ -909,7 +909,7 @@ void rc_info_callback_process(const std_msgs::UInt64::ConstPtr& msg)
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "listener");
+  ros::init(argc, argv, "listener_process");
 
 
   ros::NodeHandle point_handle;
