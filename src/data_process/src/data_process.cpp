@@ -502,7 +502,7 @@ static float calculate_floor_hight(const pcl::PointCloud<pcl::PointXYZ>::Ptr inp
 
 
 
-static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double *path_angle)
 {
   /*
     int32_t pcd_num = 0;
@@ -672,6 +672,8 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
 
         //find
         bool find_end_success = false;
+        double cur_path_angle = 0.0, find_path_anlge = 0.0;
+
         for(i = MAP_VALID_ROW_NUM - 1; (i > start_y) && (find_end_success == false); i-=ROW_PATH_FIND_GAP)
         {
         #if CAR_DRIVE_DIR
@@ -682,6 +684,20 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
             {
                 //calculate the straight line between start point and end point
                 //thus: (end_y - start_y) * (x - start_x) = (y - start_y) * (end_x - start_x)
+                //calculate the angle between the path and front line
+                if(end_x == start_x)
+                {
+                  cur_path_angle = 0;
+                }
+                else if(((end_y - start_y) / (end_x - start_x)) >= 0)    //turn right
+                {
+                  cur_path_angle = 90 - ((180/M_PI) * atan((double)(end_y - start_y) / (double)(end_x - start_x)));
+                }
+                else      //minus angle means turn left
+                {
+                  cur_path_angle = -1 * (90 + ((180/M_PI) * atan((double)(end_y - start_y) / (double)(end_x - start_x))));
+                }
+
                 end_x = i;
                 end_y = j;
                 int row_index = 0;
@@ -711,35 +727,47 @@ static int cloud_proc(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
                 {
                     path_valid = 1;
                     find_end_success = true;
+                    find_path_anlge = cur_path_angle;
                 }
             }
-
-            #if(DEBUG_PRINT)
-            gettimeofday(&tv_tag5, NULL);
-            cout<<"[opencv proc time]: "<<  (tv_tag5.tv_sec*1000000 + tv_tag5.tv_usec) - (tv_tag4.tv_sec*1000000 + tv_tag4.tv_usec)<<endl;
-            #endif
-
-            #if(PLOT_PATH)
-            int row_index = 0;
-            int col_index = 0;
-            for(row_index = start_x + 1; (row_index < end_x); row_index++)
-            {
-                for(col_index = 0; (col_index < MAP_VALID_COL_NUM); col_index++)
-                {
-                    uchar value = obstacle_binary.at<uchar>(row_index, col_index);
-                    long abs_value = 0;
-                    abs_value = abs(((row_index - start_x)*(end_y - start_y)) - ((col_index - start_y)*(end_x - start_x)));
-
-                    if(abs_value <= IN_LINE_THRESHOLD)
-                    {
-                        obstacle_binary.at<uchar>(row_index, col_index) = 128;
-                    }
-                }
-            }
-            #endif
-
-
         }
+
+        //calculate the angle of the path
+        if(find_end_success)
+        {
+          cout << "path_angle get in find_end_success: " << find_path_anlge << endl;
+          *path_angle = find_path_anlge;
+        }
+        else
+        {
+          return -1;
+        }
+
+
+        #if(DEBUG_PRINT)
+        gettimeofday(&tv_tag5, NULL);
+        cout<<"[opencv proc time]: "<<  (tv_tag5.tv_sec*1000000 + tv_tag5.tv_usec) - (tv_tag4.tv_sec*1000000 + tv_tag4.tv_usec)<<endl;
+        #endif
+
+        #if(PLOT_PATH)
+        int row_index = 0;
+        int col_index = 0;
+        for(row_index = start_x + 1; (row_index < end_x); row_index++)
+        {
+            for(col_index = 0; (col_index < MAP_VALID_COL_NUM); col_index++)
+            {
+                uchar value = obstacle_binary.at<uchar>(row_index, col_index);
+                long abs_value = 0;
+                abs_value = abs(((row_index - start_x)*(end_y - start_y)) - ((col_index - start_y)*(end_x - start_x)));
+
+                if(abs_value <= IN_LINE_THRESHOLD)
+                {
+                    obstacle_binary.at<uchar>(row_index, col_index) = 128;
+                }
+            }
+        }
+        #endif
+
         #if(DEBUG_PRINT)
         cout << "path_valid: " << path_valid << " end_point, row: " << end_x << " col: " << end_y << endl;
         #endif
@@ -843,7 +871,14 @@ void pointcloud2_process_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 
   //processing cloud point
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPointer = cloud.makeShared();
-  cloud_proc(cloudPointer);
+  double path_angle = 0.1;
+
+  if(cloud_proc(cloudPointer, &path_angle) == 0)
+  {
+      //send path angle to the direction controller
+      cout << "path_angle get in cloud_proc: " << path_angle<< endl;
+
+  }
 }
 
 
