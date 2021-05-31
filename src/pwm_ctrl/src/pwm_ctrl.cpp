@@ -220,7 +220,7 @@ void navi_status_callback(const std_msgs::UInt8::ConstPtr& msg)
   }
 }
 
-static void* ctrl_mission(void)
+static void* ctrl_mission(void *arg)
 {
     printf("enter ctrl_mission\r\n");
 
@@ -252,6 +252,7 @@ int main(int argc, char **argv)
     ros::Subscriber navi_task_sub = n.subscribe(PROG_NAV_STATUS_TOPIC, 100, navi_status_callback);
 
     pthread_t thread;
+    static ctrl_desc_t local_ctrl;
 
     ros::Rate loop_rate(LOOP_RATE_DEFAULT);
 
@@ -280,7 +281,6 @@ int main(int argc, char **argv)
 
     	if(len > 0)
         {
-            static ctrl_desc_t local_ctrl;
             decode_ret = decode_value(buf, len, frame_data, &local_ctrl);
         }
         memset(buf, 0, sizeof(buf));
