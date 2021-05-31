@@ -164,50 +164,6 @@ static int decode_value(uint8_t* buf, int len, uint8_t *frame_data, ctrl_desc_t 
 
 
 
-void sample_status_callback(const std_msgs::UInt8::ConstPtr& msg)
-{
-  //ROS_INFO("nick enter sample_status_callback");
-
-
-  uint8_t recv_data = msg->data;
-
-  pwm_is_used_by_program = true;
-  switch(recv_data)
-  {
-    case(PROG_TASK_READY):
-    {
-        set_speed_0(pwm_data_global);
-        set_direct_left(pwm_data_global);
-        sleep(1);
-        set_direct_right(pwm_data_global);
-        sleep(1);
-        set_direct_front(pwm_data_global);
-
-        cout << "power on & ready" <<endl;
-        break;        
-    }
-    case(PROG_TASK_BEGIN):
-    {
-        set_speed_0(pwm_data_global);
-        set_direct_left(pwm_data_global);
-        sleep(1);
-
-        cout << "start sample" <<endl;
-        break;
-    }
-    case(PROG_TASK_END):
-    {
-
-        set_speed_0(pwm_data_global);
-        set_direct_right(pwm_data_global);
-        sleep(1);
-        cout << "stop sample" <<endl;
-        break;
-    }
-    pwm_is_used_by_program = false;
-
-  }
-}
 
 void sample_status_callback(const std_msgs::UInt8::ConstPtr& msg)
 {
@@ -284,6 +240,8 @@ static void* ctrl_mission(void)
 
     return NULL;
 }
+
+
 int main(int argc, char **argv)
 {
     uart_init();
@@ -302,7 +260,7 @@ int main(int argc, char **argv)
     int len = 0;
 
     //create sbus output thread
-    if ((pthread_create(&thread, NULL, ctrl_mission, NULL == -1)
+    if ((pthread_create(&thread, NULL, ctrl_mission, NULL) == -1))
     {
         printf("thread ctrl_mission create error!\n");
         return 1;
