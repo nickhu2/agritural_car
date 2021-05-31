@@ -217,6 +217,7 @@ int main(int argc, char **argv)
   status_publisher = &chatter_pub;
 
   //data capture task ready for sampling
+  sleep(3);
   std_msgs::UInt8 msg;
   msg.data = PROG_TASK_READY;
   status_publisher->publish(msg);
