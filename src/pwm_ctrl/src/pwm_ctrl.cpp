@@ -169,9 +169,10 @@ void sample_task_callback(const std_msgs::UInt8::ConstPtr& msg)
 {
   uint8_t recv_data = msg->data;
 
+  cout << "[sample task info]: " << recv_data << endl;
+
   switch(recv_data)
   {
-    cout << "[sample task info]: " << recv_data << endl;
 
     case(PROG_TASK_READY):
     {
@@ -199,9 +200,10 @@ void navi_task_callback(const std_msgs::UInt8::ConstPtr& msg)
 {
   uint8_t recv_data = msg->data;
 
+  cout << "[navigation task info]: " << recv_data << endl;
+
   switch(recv_data)
   {
-    cout << "[navigation task info]: " << recv_data << endl;
 
     case(PROG_TASK_READY):
     {
@@ -357,7 +359,7 @@ int main(int argc, char **argv)
                 }
                 case(AUTO_MODE_RUN):
                 {
-                    if(navigate_task_status = PROG_TASK_END)
+                    if(navigate_task_status == PROG_TASK_END)
                     {
                         ctrl_stage = PWM_CTRL_READY;
                         set_speed_0(pwm_data_global);
@@ -399,12 +401,15 @@ int main(int argc, char **argv)
                 }
                 case(SAMPLE_MODE_RUN):
                 {
-                    if(sample_task_status = PROG_TASK_END)
+                    memcpy(pwm_data_global, frame_data ,sizeof(frame_data));
+
+                    if(sample_task_status == PROG_TASK_END)
                     {
                         ctrl_stage = PWM_CTRL_READY;
                         set_speed_0(pwm_data_global);
                         set_direct_right(pwm_data_global);
                         sleep(1);
+                        cout << "[next ctrl_stage]: PWM_CTRL_READY" << endl;
                     }
 
                     break;
