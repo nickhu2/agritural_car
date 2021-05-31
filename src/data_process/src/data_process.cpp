@@ -947,7 +947,7 @@ int main(int argc, char **argv)
 
   //data process task ready for navigation
   std_msgs::UInt8 msg;
-  msg.data = PROG_TASK_UNKONW;
+  msg.data = PROG_TASK_READY;
   status_publisher->publish(msg);
 
   ros::spin();

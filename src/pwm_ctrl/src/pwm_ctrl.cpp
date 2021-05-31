@@ -165,12 +165,14 @@ static int decode_value(uint8_t* buf, int len, uint8_t *frame_data, ctrl_desc_t 
 
 
 
-void sample_status_callback(const std_msgs::UInt8::ConstPtr& msg)
+void sample_task_callback(const std_msgs::UInt8::ConstPtr& msg)
 {
   uint8_t recv_data = msg->data;
 
   switch(recv_data)
   {
+    cout << "[sample task info]: " << recv_data << endl;
+
     case(PROG_TASK_READY):
     {
         sample_task_status = PROG_TASK_READY;
@@ -193,14 +195,17 @@ void sample_status_callback(const std_msgs::UInt8::ConstPtr& msg)
 }
 
 
-void navi_status_callback(const std_msgs::UInt8::ConstPtr& msg)
+void navi_task_callback(const std_msgs::UInt8::ConstPtr& msg)
 {
   uint8_t recv_data = msg->data;
 
   switch(recv_data)
   {
+    cout << "[navigation task info]: " << recv_data << endl;
+
     case(PROG_TASK_READY):
     {
+
         navigate_task_status = PROG_TASK_READY;
         break;
     }
@@ -248,8 +253,8 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "talker");
     ros::NodeHandle n;
     ros::Publisher chatter_pub = n.advertise<std_msgs::UInt64>(RC_CTRL_INFO, 1000);
-    ros::Subscriber sample_task_sub = n.subscribe(PROG_SAMPLE_STATUS_TOPIC, 100, sample_status_callback);
-    ros::Subscriber navi_task_sub = n.subscribe(PROG_NAV_STATUS_TOPIC, 100, navi_status_callback);
+    ros::Subscriber sample_task_sub = n.subscribe(PROG_SAMPLE_STATUS_TOPIC, 100, sample_task_callback);
+    ros::Subscriber navi_task_sub = n.subscribe(PROG_NAV_STATUS_TOPIC, 100, navi_task_callback);
 
     pthread_t thread;
     static ctrl_desc_t local_ctrl;

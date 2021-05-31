@@ -125,7 +125,7 @@ void pointcloud2_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 }
 
 
-void sample_status_callback(const std_msgs::UInt64::ConstPtr& msg)
+static void sample_status_callback(const std_msgs::UInt64::ConstPtr& msg)
 {
   //ROS_INFO("nick enter sample_status_callback");
   static uint16_t last_work_status = PAUSE;
