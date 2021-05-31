@@ -282,19 +282,12 @@ int main(int argc, char **argv)
         uint8_t  frame_data[FRAME_LEN] = {0};
 
         len = uart_recv_timeout(buf, sizeof(buf), 100);
-
-        cout << "len " << len << endl;
+        //printf("[info] read bytes size: %d\n", len);
 
     	if(len > 0)
         {
             decode_ret = decode_value(buf, len, frame_data, &local_ctrl);
         }
-        if(decode_ret == 0)
-        {
-            cout << "mode: " << local_ctrl.work_mode << " status " << local_ctrl.status <<
-                " speed_pwm_info " << local_ctrl.speed_pwm_info << " direction_pwm_info " << local_ctrl.direction_pwm_info << end;
-        }
-
         memset(buf, 0, sizeof(buf));
 
         //publish RC infomation firstly

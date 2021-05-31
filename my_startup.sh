@@ -50,6 +50,4 @@ rosrun image_view image_saver "_filename_format:=/mnt/zed_data/picture_zed/image
 
 #kill -9 $(pidof data_capture)
 
-#kill -9 $(pidof data_process)
-
 #kill -9 $(pidof image_saver)
