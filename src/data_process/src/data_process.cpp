@@ -860,7 +860,6 @@ static ros::Publisher *status_publisher = NULL;
 
 void pointcloud2_process_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
 {
-  ROS_INFO("nick enter pointcloud2_process_callback");
   if(navigation_switch == false)
   {
     return;
@@ -872,6 +871,8 @@ void pointcloud2_process_callback(const sensor_msgs::PointCloud2ConstPtr &msg)
   //processing cloud point
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPointer = cloud.makeShared();
   double path_angle = 0.1;
+
+  ROS_INFO("pointcloud2_process_callback begin");
 
   if(cloud_proc(cloudPointer, &path_angle) == 0)
   {
