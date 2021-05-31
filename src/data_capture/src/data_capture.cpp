@@ -217,9 +217,7 @@ int main(int argc, char **argv)
   ros::Publisher chatter_pub = sample_status.advertise<std_msgs::UInt8>(PROG_SAMPLE_STATUS_TOPIC, 100);
   status_publisher = &chatter_pub;
 
-  //wait PWM ready
-  sleep(3);
-
+  //data capture task ready for sampling
   std_msgs::UInt8 msg;
   msg.data = PROG_TASK_READY;
   status_publisher->publish(msg);

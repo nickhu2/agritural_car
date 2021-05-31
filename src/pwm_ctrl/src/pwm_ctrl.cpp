@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <errno.h>
+#include <pthread.h>
 #include <sys/ioctl.h> 
 #include <linux/serial.h>
 #include "ros/ros.h"
@@ -22,7 +23,7 @@
 
 
 
-
+#define PWM_CTRL_LOOP_US        (100000)
 #define WORK_MODE_THRESHOLD1    (900)
 #define WORK_MODE_THRESHOLD2    (1100)
 
@@ -52,6 +53,23 @@ static bool pwm_is_used_by_program = false;
 #define SPEED_CHANNEL       (4)
 #define DIRECT_CHANNEL      (3)
 
+typedef enum
+{
+    PWM_CTRL_IDLE = 1,
+    PWM_CTRL_READY,
+    AUTO_MODE_INIT,
+    AUTO_MODE_RUN,
+    MANUAL_MODE_INIT,
+    MANUAL_MODE_RUN,
+    SAMPLE_MODE_INIT,
+    SAMPLE_MODE_RUN,
+} pwm_control_stage_t;
+
+static pwm_control_stage_t ctrl_stage = PWM_CTRL_IDLE;
+static uint8_t sample_task_status = PROG_TASK_UNKONW;
+static uint8_t navigate_task_status = PROG_TASK_UNKONW;
+
+static uint8_t pwm_data_global[FRAME_LEN] = {0};
 
 
 static void Process(uint8_t* raw,uint16_t* result)
@@ -146,14 +164,9 @@ static int decode_value(uint8_t* buf, int len, uint8_t *frame_data, ctrl_desc_t 
 
 
 
-void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
+void sample_status_callback(const std_msgs::UInt8::ConstPtr& msg)
 {
-  //ROS_INFO("nick enter rc_info_callback");
-  static uint16_t last_work_status = PAUSE;
-  static uint16_t cur_work_status = PAUSE;
-  uint8_t frame_temp1[FRAME_LEN] = {0};
-  uint8_t frame_temp2[FRAME_LEN] = {0};
-  uint8_t frame_temp3[FRAME_LEN] = {0};  
+  //ROS_INFO("nick enter sample_status_callback");
 
 
   uint8_t recv_data = msg->data;
@@ -163,80 +176,30 @@ void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
   {
     case(PROG_TASK_READY):
     {
-        set_direct_left(frame_temp1, frame_temp2);
-        set_speed_0(frame_temp2, frame_temp3);
-        uart_send(frame_temp3, sizeof(frame_temp3));
+        set_speed_0(pwm_data_global);
+        set_direct_left(pwm_data_global);
         sleep(1);
-
-
-        memset(frame_temp1, 0, sizeof(frame_temp1));
-        memset(frame_temp2, 0, sizeof(frame_temp2));
-        memset(frame_temp3, 0, sizeof(frame_temp3));
-
-        set_direct_right(frame_temp1, frame_temp2);
-        set_speed_0(frame_temp2, frame_temp3);
-        uart_send(frame_temp3, sizeof(frame_temp3));
+        set_direct_right(pwm_data_global);
         sleep(1);
-
-        set_direct_front(frame_temp1, frame_temp2);
-        set_speed_0(frame_temp2, frame_temp3);
-        uart_send(frame_temp3, sizeof(frame_temp3));
+        set_direct_front(pwm_data_global);
 
         cout << "power on & ready" <<endl;
         break;        
     }
     case(PROG_TASK_BEGIN):
     {
-        memset(frame_temp1, 0, sizeof(frame_temp1));
-        memset(frame_temp2, 0, sizeof(frame_temp2));
-        memset(frame_temp3, 0, sizeof(frame_temp3));
-
-
-        set_direct_left(frame_temp1, frame_temp2);
-
-
-        uint8_t decode_temp[FRAME_LEN] = {0};
-        ctrl_desc_t local_ctrl;
-        memset(&local_ctrl, 0, sizeof(local_ctrl));
-        if(decode_value(frame_temp2, FRAME_LEN, decode_temp, &local_ctrl) == 0)
-        {
-            printf("decode1: %u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
-        }
-        else
-        {
-            printf("decode1: decode failed\r\n");
-        }
-
-
-        set_speed_0(frame_temp2, frame_temp3);
-
-        memset(decode_temp, 0, FRAME_LEN);
-        memset(&local_ctrl, 0, sizeof(local_ctrl));
-        if(decode_value(frame_temp3, FRAME_LEN, decode_temp, &local_ctrl) == 0)
-        {
-            printf("decode2: %u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
-        }
-        else
-        {
-            printf("decode2: decode failed\r\n");
-        }
-
-
-        uart_send(frame_temp3, sizeof(frame_temp3));
-
+        set_speed_0(pwm_data_global);
+        set_direct_left(pwm_data_global);
         sleep(1);
+
         cout << "start sample" <<endl;
         break;
     }
     case(PROG_TASK_END):
     {
-        memset(frame_temp1, 0, sizeof(frame_temp1));
-        memset(frame_temp2, 0, sizeof(frame_temp2));
-        memset(frame_temp3, 0, sizeof(frame_temp3));
 
-        set_direct_right(frame_temp1, frame_temp2);
-        set_speed_0(frame_temp2, frame_temp3);
-        uart_send(frame_temp3, sizeof(frame_temp3));
+        set_speed_0(pwm_data_global);
+        set_direct_right(pwm_data_global);
         sleep(1);
         cout << "stop sample" <<endl;
         break;
@@ -246,15 +209,91 @@ void rc_info_callback(const std_msgs::UInt8::ConstPtr& msg)
   }
 }
 
+void sample_status_callback(const std_msgs::UInt8::ConstPtr& msg)
+{
+  uint8_t recv_data = msg->data;
 
+  switch(recv_data)
+  {
+    case(PROG_TASK_READY):
+    {
+        sample_task_status = PROG_TASK_READY;
+        break;
+    }
+    case(PROG_TASK_BEGIN):
+    {
+        sample_task_status = PROG_TASK_BEGIN;
+        break;
+    }
+    case(PROG_TASK_END):
+    {
+        sample_task_status = PROG_TASK_END;
+        break;
+    }
+    default:
+    {
+    }
+  }
+}
+
+
+void navi_status_callback(const std_msgs::UInt8::ConstPtr& msg)
+{
+  uint8_t recv_data = msg->data;
+
+  switch(recv_data)
+  {
+    case(PROG_TASK_READY):
+    {
+        navigate_task_status = PROG_TASK_READY;
+        break;
+    }
+    case(PROG_TASK_BEGIN):
+    {
+        navigate_task_status = PROG_TASK_BEGIN;
+        break;
+    }
+    case(PROG_TASK_END):
+    {
+        navigate_task_status = PROG_TASK_END;
+        break;
+    }
+    default:
+    {
+    }
+  }
+}
+
+static void* ctrl_mission(void)
+{
+    printf("enter ctrl_mission\r\n");
+
+    while(1)
+    {
+        if(ctrl_stage == AUTO_MODE_RUN)
+        {
+
+        }
+        else
+        {
+            uart_send(pwm_data_global, sizeof(pwm_data_global));
+        }
+
+        usleep(PWM_CTRL_LOOP_US);
+    }
+
+    return NULL;
+}
 int main(int argc, char **argv)
 {
     uart_init();
     ros::init(argc, argv, "talker");
     ros::NodeHandle n;
     ros::Publisher chatter_pub = n.advertise<std_msgs::UInt64>(RC_CTRL_INFO, 1000);
-    ros::Subscriber pgro_status_sub = n.subscribe(PROG_SAMPLE_STATUS_TOPIC, 100, rc_info_callback);
+    ros::Subscriber sample_task_sub = n.subscribe(PROG_SAMPLE_STATUS_TOPIC, 100, sample_status_callback);
+    ros::Subscriber navi_task_sub = n.subscribe(PROG_NAV_STATUS_TOPIC, 100, navi_status_callback);
 
+    pthread_t thread;
 
     ros::Rate loop_rate(LOOP_RATE_DEFAULT);
 
@@ -262,46 +301,156 @@ int main(int argc, char **argv)
     uint8_t buf[MAX_BUF_SIZE] = {0};
     int len = 0;
 
-
-
-    while (ros::ok())
+    //create sbus output thread
+    if ((pthread_create(&thread, NULL, ctrl_mission, NULL == -1)
     {
+        printf("thread ctrl_mission create error!\n");
+        return 1;
+    }
+
+
+    //start state machine translate
+    while(ros::ok())
+    {
+
         std_msgs::UInt64 msg;
+        uint8_t decode_ret = 1;
+        uint8_t  frame_data[FRAME_LEN] = {0};
 
         len = uart_recv_timeout(buf, sizeof(buf), 100);
         //printf("[info] read bytes size: %d\n", len);
 
     	if(len > 0)
         {
-            ctrl_desc_t local_ctrl;
-            uint8_t  frame_data[FRAME_LEN];
+            static ctrl_desc_t local_ctrl;
+            decode_ret = decode_value(buf, len, frame_data, &local_ctrl);
+        }
+        memset(buf, 0, sizeof(buf));
 
-            if(decode_value(buf, len, frame_data, &local_ctrl) == 0)
+        //publish RC infomation firstly
+        if(decode_ret == 0)
+        {
+            uint64_t data_to_send = 0;
+            data_to_send = (uint64_t)((uint16_t)local_ctrl.work_mode);
+            data_to_send |= ((uint64_t)((uint16_t)local_ctrl.status)) << 16;
+            data_to_send |= ((uint64_t)((uint16_t)local_ctrl.speed_pwm_info)) << 32;
+            data_to_send |= ((uint64_t)((uint16_t)local_ctrl.direction_pwm_info)) << 48;
+            msg.data = data_to_send;
+            chatter_pub.publish(msg);
+
+            //printf("rc info:0x%llx", msg.data);
+            //printf("%u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
+        }
+
+        //translate the state machine 2ndly
+        if(decode_ret == 0)
+        {
+            switch(ctrl_stage)
             {
-                if((local_ctrl.work_mode == MANUAL_MODE) && (pwm_is_used_by_program == false))
+                case(PWM_CTRL_IDLE):
                 {
-                    //in mannul mode, sendout sbus data as RC input
-                    uart_send(frame_data, sizeof(frame_data));
+                    if((sample_task_status == PROG_TASK_READY) && (navigate_task_status == PROG_TASK_READY))
+                    {
+                        ctrl_stage = PWM_CTRL_READY;
+                        //indicate ready
+                        set_speed_0(pwm_data_global);
+                        set_direct_left(pwm_data_global);
+                        sleep(1);
+                        set_direct_right(pwm_data_global);
+                        sleep(1);
+                        set_direct_front(pwm_data_global);
+                        cout << "[next ctrl_stage]: PWM_CTRL_READY" << endl;
+                    }
+
+                    break;
                 }
-                else
+                case(PWM_CTRL_READY):
                 {
-                    //TODO: ctrl speed & direction as program in auto mode
-                    uart_send(frame_data, sizeof(frame_data));
+                    if(local_ctrl.work_mode == MANUAL_MODE)
+                    {
+                        ctrl_stage = MANUAL_MODE_INIT;
+                    }
+                    else if((local_ctrl.work_mode == AUTO_MODE) && (navigate_task_status == PROG_TASK_BEGIN))
+                    {
+                        ctrl_stage = AUTO_MODE_INIT;
+                    }
+                    else if((local_ctrl.work_mode == SAMPLE_MODE) && (sample_task_status == PROG_TASK_BEGIN))
+                    {
+                        ctrl_stage = SAMPLE_MODE_INIT;
+                    }
+
+                    break;
                 }
-                local_work_status = local_ctrl.status;
 
-                uint64_t data_to_send = 0;
-                data_to_send = (uint64_t)((uint16_t)local_ctrl.work_mode);
-                data_to_send |= ((uint64_t)((uint16_t)local_ctrl.status)) << 16;
-                data_to_send |= ((uint64_t)((uint16_t)local_ctrl.speed_pwm_info)) << 32;
-                data_to_send |= ((uint64_t)((uint16_t)local_ctrl.direction_pwm_info)) << 48;
-                msg.data = data_to_send;
-                chatter_pub.publish(msg);
+                case(AUTO_MODE_INIT):
+                {
+                    ctrl_stage = AUTO_MODE_RUN;
+                    //indicate auto mode run
+                    set_speed_0(pwm_data_global);
+                    set_direct_left(pwm_data_global);
+                    sleep(1);
+                    cout << "[next ctrl_stage]: AUTO_MODE_RUN" << endl;
+                    break;
+                }
+                case(AUTO_MODE_RUN):
+                {
+                    if(navigate_task_status = PROG_TASK_END)
+                    {
+                        ctrl_stage = PWM_CTRL_READY;
+                        set_speed_0(pwm_data_global);
+                        set_direct_right(pwm_data_global);
+                        sleep(1);
+                    }
 
-                //printf("rc info:0x%llx", msg.data);
-                //printf("%u, %u, %u, %u\n", local_ctrl.work_mode, local_ctrl.status, local_ctrl.speed_pwm_info, local_ctrl.direction_pwm_info);
+                    break;
+                }
+                case(MANUAL_MODE_INIT):
+                {
+                    ctrl_stage = MANUAL_MODE_RUN;
+                    break;
+                }
+                case(MANUAL_MODE_RUN):
+                {
+                    if((local_ctrl.work_mode == AUTO_MODE) && (navigate_task_status == PROG_TASK_BEGIN))
+                    {
+                        ctrl_stage = AUTO_MODE_INIT;
+                    }
+                    else if((local_ctrl.work_mode == SAMPLE_MODE) && (sample_task_status == PROG_TASK_BEGIN))
+                    {
+                        ctrl_stage = SAMPLE_MODE_INIT;
+                    }
+
+                    memcpy(pwm_data_global, frame_data ,sizeof(frame_data));
+
+                    break;
+                }
+                case(SAMPLE_MODE_INIT):
+                {
+                    ctrl_stage = SAMPLE_MODE_RUN;
+                    set_speed_0(pwm_data_global);
+                    set_direct_left(pwm_data_global);
+                    sleep(1);
+                    cout << "[next ctrl_stage]: SAMPLE_MODE_RUN" << endl;
+
+                    break;
+                }
+                case(SAMPLE_MODE_RUN):
+                {
+                    if(sample_task_status = PROG_TASK_END)
+                    {
+                        ctrl_stage = PWM_CTRL_READY;
+                        set_speed_0(pwm_data_global);
+                        set_direct_right(pwm_data_global);
+                        sleep(1);
+                    }
+
+                    break;
+                }
+                default:
+                {
+                    ctrl_stage = PWM_CTRL_READY;
+                }
             }
-            memset(buf, 0, sizeof(buf));
         }
 
         ros::spinOnce();

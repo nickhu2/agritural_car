@@ -18,6 +18,7 @@
 #define PROG_TASK_READY			(0x1)
 #define PROG_TASK_BEGIN			(0x2)
 #define PROG_TASK_END			(0x3)
+#define PROG_TASK_UNKONW		(0xFF)
 
 
 typedef enum
@@ -42,9 +43,9 @@ typedef struct
 } ctrl_desc_t;
 
 
-int32_t set_direct_front(uint8_t *frame_in, uint8_t *frame_out);
-int32_t set_direct_left(uint8_t *frame_in, uint8_t *frame_out);
-int32_t set_direct_right(uint8_t *frame_in, uint8_t *frame_out);
-int32_t set_speed_0(uint8_t *frame_in, uint8_t *frame_out);
+int32_t set_direct_front(uint8_t *frame_data);
+int32_t set_direct_left(uint8_t *frame_data);
+int32_t set_direct_right(uint8_t *frame_data);
+int32_t set_speed_0(uint8_t *frame_data);
 
 #endif //MOVE_CTRL_H__

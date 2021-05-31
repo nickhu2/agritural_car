@@ -944,11 +944,9 @@ int main(int argc, char **argv)
   ros::Publisher chatter_pub = nav_status.advertise<std_msgs::UInt8>(PROG_NAV_STATUS_TOPIC, 100);
   status_publisher = &chatter_pub;
 
-  //wait PWM ready
-  sleep(3);
-
+  //data process task ready for navigation
   std_msgs::UInt8 msg;
-  msg.data = PROG_TASK_READY;
+  msg.data = PROG_TASK_UNKONW;
   status_publisher->publish(msg);
 
   ros::spin();
